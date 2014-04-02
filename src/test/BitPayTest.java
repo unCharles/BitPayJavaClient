@@ -24,9 +24,9 @@ public class BitPayTest {
 	
 	@Before
 	public void setUp() throws Exception {
-		this.bitpay = new BitPay(API_KEY, "USD");
+		this.bitpay = new BitPay(API_KEY);
 		
-		basicInvoice = this.bitpay.createInvoice(100);
+		basicInvoice = this.bitpay.createInvoice(100, "USD");
 	}
 
 	@After
@@ -35,17 +35,17 @@ public class BitPayTest {
 
 	@Test
 	public void testShouldCreateInvoice100BTC() {
-		this.bitpay = new BitPay(API_KEY, "BTC");
+		this.bitpay = new BitPay(API_KEY);
 		
-		Invoice invoice = this.bitpay.createInvoice(100);
+		Invoice invoice = this.bitpay.createInvoice(100, "BTC");
 		assertEquals(invoice.getBtcPrice(), 100.0, BTC_EPSILON);
 	}
 	
 	@Test
 	public void testShouldCreateInvoice100USD() {
-		this.bitpay = new BitPay(API_KEY, "USD");
+		this.bitpay = new BitPay(API_KEY);
 		
-		Invoice invoice = this.bitpay.createInvoice(100);
+		Invoice invoice = this.bitpay.createInvoice(100, "USD");
 		assertEquals(invoice.getPrice(), 100.0, EPSILON);
 	}
 	
@@ -71,17 +71,17 @@ public class BitPayTest {
 
 	@Test
 	public void testShouldCreateInvoice100EUR() {
-		this.bitpay = new BitPay(API_KEY, "EUR");
+		this.bitpay = new BitPay(API_KEY);
 		
-		Invoice invoice = this.bitpay.createInvoice(100);
+		Invoice invoice = this.bitpay.createInvoice(100, "EUR");
 		assertEquals(invoice.getPrice(), 100.0, EPSILON);
 	}
 	
 	@Test
 	public void testShouldGetInvoice() {
-		this.bitpay = new BitPay(API_KEY, "EUR");
+		this.bitpay = new BitPay(API_KEY);
 		
-		Invoice invoice = this.bitpay.createInvoice(100);
+		Invoice invoice = this.bitpay.createInvoice(100, "EUR");
 
 		Invoice retreivedInvoice = this.bitpay.getInvoice(invoice.getId());
 		
@@ -90,7 +90,7 @@ public class BitPayTest {
 	
 	@Test
 	public void testShouldCreateInvoiceWithAdditionalParams() {
-		this.bitpay = new BitPay(API_KEY, "USD");
+		this.bitpay = new BitPay(API_KEY);
 		
 		InvoiceParams params = new InvoiceParams();
 		params.setBuyerName("Satoshi");
@@ -98,7 +98,7 @@ public class BitPayTest {
 		params.setFullNotifications(true);
 		params.setNotificationEmail("satoshi@bitpay.com");
 		
-		Invoice invoice = this.bitpay.createInvoice(100, params);
+		Invoice invoice = this.bitpay.createInvoice(100, "USD", params);
 		
 		//Print to verify the information is on the invoice.
 		System.out.println(invoice.getUrl());
@@ -109,7 +109,7 @@ public class BitPayTest {
 	
 	@Test
 	public void testShouldGetExchangeRates() {
-		this.bitpay = new BitPay(API_KEY, "EUR");
+		this.bitpay = new BitPay(API_KEY);
 		
 		Rates rates = this.bitpay.getRates();
 		
@@ -122,7 +122,7 @@ public class BitPayTest {
 	
 	@Test
 	public void testShouldGetUSDExchangeRate() {
-		this.bitpay = new BitPay(API_KEY, "EUR");
+		this.bitpay = new BitPay(API_KEY);
 		
 		Rates rates = this.bitpay.getRates();
 		double rate = rates.getRate("USD");
@@ -132,7 +132,7 @@ public class BitPayTest {
 	
 	@Test
 	public void testShouldGetEURExchangeRate() {
-		this.bitpay = new BitPay(API_KEY, "EUR");
+		this.bitpay = new BitPay(API_KEY);
 		
 		Rates rates = this.bitpay.getRates();
 		double rate = rates.getRate("EUR");
@@ -142,7 +142,7 @@ public class BitPayTest {
 	
 	@Test
 	public void testShouldGetCNYExchangeRate() {
-		this.bitpay = new BitPay(API_KEY, "EUR");
+		this.bitpay = new BitPay(API_KEY);
 		
 		Rates rates = this.bitpay.getRates();
 		double rate = rates.getRate("CNY");
@@ -152,7 +152,7 @@ public class BitPayTest {
 	
 	@Test
 	public void testShouldUpdateExchangeRates() {
-		this.bitpay = new BitPay(API_KEY, "EUR");
+		this.bitpay = new BitPay(API_KEY);
 		
 		Rates rates = this.bitpay.getRates();
 		

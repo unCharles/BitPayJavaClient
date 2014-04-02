@@ -34,7 +34,6 @@ public class BitPay {
 	private HttpClient client;
 	String auth;
 
-	private String currency;
 	
 	/**
 	 * Constructor.
@@ -44,9 +43,8 @@ public class BitPay {
 	 * @param currency
 	 * default currency code
 	 */
-	public BitPay(String apiKey, String currency) {
+	public BitPay(String apiKey) {
 		this.apiKey = apiKey;
-		this.currency = currency;
 		this.auth = new String(Base64.encodeBase64((this.apiKey + ": ").getBytes()));
 		client = HttpClientBuilder.create().build();
 	}
@@ -56,7 +54,7 @@ public class BitPay {
 	 * @param price - set in this.currency
 	 * @return Invoice
 	 */
-	public Invoice createInvoice(double price) {
+	public Invoice createInvoice(double price, String currency) {
 		if(currency.length() > 3) {
 			throw new IllegalArgumentException("Must be a valid currency code");
 		}
@@ -67,7 +65,7 @@ public class BitPay {
 			HttpPost post = new HttpPost(url);
 			
 			post.addHeader("Authorization", "Basic " + this.auth);
-			post.setEntity(new UrlEncodedFormEntity(this.getParams(price, this.currency), "UTF-8"));
+			post.setEntity(new UrlEncodedFormEntity(this.getParams(price, currency), "UTF-8"));
 			
 			HttpResponse response = this.client.execute(post);
 			
@@ -93,7 +91,7 @@ public class BitPay {
 	 * @param params - optional invoice parameters
 	 * @return Invoice
 	 */
-	public Invoice createInvoice(double price, InvoiceParams params) {
+	public Invoice createInvoice(double price, String currency, InvoiceParams params) {
 		if(currency.length() > 3) {
 			throw new IllegalArgumentException("Must be a valid currency code");
 		}
@@ -104,7 +102,7 @@ public class BitPay {
 			HttpPost post = new HttpPost(url);
 			
 			post.addHeader("Authorization", "Basic " + this.auth);
-			post.setEntity(new UrlEncodedFormEntity(this.getParams(price, this.currency, params), "UTF-8"));
+			post.setEntity(new UrlEncodedFormEntity(this.getParams(price, currency, params), "UTF-8"));
 			
 			HttpResponse response = this.client.execute(post);
 			
