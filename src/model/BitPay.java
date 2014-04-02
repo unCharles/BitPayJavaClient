@@ -102,6 +102,7 @@ public class BitPay {
 			HttpPost post = new HttpPost(url);
 			
 			post.addHeader("Authorization", "Basic " + this.auth);
+			post.addHeader("X-BitPay-Plugin-Info", "Javalib0.1.0");
 			post.setEntity(new UrlEncodedFormEntity(this.getParams(price, currency, params), "UTF-8"));
 			
 			HttpResponse response = this.client.execute(post);
