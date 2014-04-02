@@ -19,12 +19,12 @@ Getting Started
 Log into your BitPay merchant account and generate an API key. Then all you need to do is instantiate a BitPay object, and pass in your API key and the default currency code.
 
 ```java
-Bitpay bitpay = new Bitpay("API_KEY", "USD");
+Bitpay bitpay = new Bitpay("API_KEY");
 ```
 
 ####Create an invoice
 ```java
-Invoice invoice = bitpay.createInvoice(100);
+Invoice invoice = bitpay.createInvoice(100, "USD");
 
 String invoiceUrl = invoice.getURL();
 
