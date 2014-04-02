@@ -56,5 +56,5 @@ params.setBuyerEmail("satoshi@bitpay.com");
 params.setFullNotifications(true);
 params.setNotificationEmail("satoshi@bitpay.com");
 		
-Invoice invoice = this.bitpay.createInvoice(100, params);
+Invoice invoice = this.bitpay.createInvoice(100, "USD", params);
 ```
