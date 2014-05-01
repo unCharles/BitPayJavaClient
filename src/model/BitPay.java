@@ -5,11 +5,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import org.json.JSONException;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
@@ -19,6 +19,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
+import java.security.*;  
 
 /**
  * 
@@ -28,12 +29,11 @@ import org.apache.http.message.BasicNameValuePair;
  */
 public class BitPay {
 	
-	private static final String BASE_URL = "https://bitpay.com/api/";
+	private static final String BASE_URL = "https://test.bp/";
 	
-	private String apiKey;
 	private HttpClient client;
-	String auth;
-
+	Signature signature;
+	long nonce;
 	
 	/**
 	 * Constructor.
@@ -43,9 +43,16 @@ public class BitPay {
 	 * @param currency
 	 * default currency code
 	 */
-	public BitPay(String apiKey) {
-		this.apiKey = apiKey;
-		this.auth = new String(Base64.encodeBase64((this.apiKey + ": ").getBytes()));
+	public BitPay(PrivateKey privateKey) {
+		this.nonce = new Date().getTime();
+		try {
+			this.signature = Signature.getInstance("SHA256withRSA");
+			signature.initSign(privateKey);
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			e.printStackTrace();
+		} 
 		client = HttpClientBuilder.create().build();
 	}
 	
@@ -64,8 +71,11 @@ public class BitPay {
 		try {
 			HttpPost post = new HttpPost(url);
 			
-			post.addHeader("Authorization", "Basic " + this.auth);
-			post.setEntity(new UrlEncodedFormEntity(this.getParams(price, currency), "UTF-8"));
+			List<NameValuePair> params = this.getParams(price, currency);
+			post.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+			String signature = signData(url, params);
+			post.addHeader("x-signature", signature);
+			post.addHeader("x-pubkey", ""); // TODO
 			
 			HttpResponse response = this.client.execute(post);
 			
@@ -101,9 +111,12 @@ public class BitPay {
 		try {
 			HttpPost post = new HttpPost(url);
 			
-			post.addHeader("Authorization", "Basic " + this.auth);
 			post.addHeader("X-BitPay-Plugin-Info", "Javalib0.1.0");
-			post.setEntity(new UrlEncodedFormEntity(this.getParams(price, currency, params), "UTF-8"));
+			List<NameValuePair> body = this.getParams(price, currency, params);
+			post.setEntity(new UrlEncodedFormEntity(body, "UTF-8"));
+			String signature = signData(url, body);
+			post.addHeader("x-signature", signature);
+			post.addHeader("x-pubkey", ""); // TODO
 			
 			HttpResponse response = this.client.execute(post);
 			
@@ -133,7 +146,10 @@ public class BitPay {
 		
 		HttpGet get = new HttpGet(url);
 		
-		get.addHeader("Authorization", "Basic " + this.auth);
+		List<NameValuePair> body = this.getParams();
+		String sig = signData(url, body);
+		get.addHeader("x-signature", sig);
+		get.addHeader("x-pubkey", ""); // TODO
 		
 		try {
 			HttpResponse response = client.execute(get);
@@ -152,6 +168,34 @@ public class BitPay {
 	}
 	
 	/**
+	 * Submit a payout request.
+	 * "http://bitpay.com/invoice?id=<ID>"
+	 * @param invoiceId
+	 * @return Invoice
+	 */
+	public String submitPayoutRequest(PayoutRequest payoutRequest) {
+		String url = BASE_URL + "payouts";
+		
+		HttpPost post = new HttpPost(url);
+		
+		List<NameValuePair> body = this.getParams();
+		String sig = signData(url, body);
+		post.addHeader("x-signature", sig);
+		post.addHeader("x-pubkey", ""); // TODO
+		
+		try {
+			HttpResponse response = client.execute(post);
+	        return response.toString();
+		} catch (ClientProtocolException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return null;
+	}
+	
+	/**
 	 * Get the current Bitcoin Exchange rates in dozens of currencies based on several exchanges.
 	 * @return Rates object.
 	 */
@@ -159,8 +203,6 @@ public class BitPay {
 		String url = BASE_URL + "rates";
 		
 		HttpGet get = new HttpGet(url);
-		
-		get.addHeader("Authorization", "Basic " + this.auth);
 		
 		try {
 			HttpResponse response = client.execute(get);
@@ -175,12 +217,39 @@ public class BitPay {
 
 		return null;
 	}
+	
+	private String signData(String url, List<NameValuePair> body) {
+		String data = url + "{";
+		for(NameValuePair param : body) {
+			data += "'" + param.getName() + "':'" + param.getValue() + "',";
+		}
+		data = data.substring(0,data.length() - 1);
+		data += "}";
+		byte[] dataInBytes = data.getBytes();  
+        try {
+			this.signature.update(dataInBytes);
+	        byte[] signedInfo = signature.sign();
+	        return signedInfo.toString();
+		} catch (SignatureException e) {
+			e.printStackTrace();
+		}
+        return "";       
+	}
 
+	private List<NameValuePair> getParams() {
+		List<NameValuePair> params = new ArrayList<NameValuePair>(2);
+		params.add(new BasicNameValuePair("nonce", this.nonce + ""));
+		this.nonce++;
+		return params;
+	}
+	
 	private List<NameValuePair> getParams(double price,
 			String currency) {
 		List<NameValuePair> params = new ArrayList<NameValuePair>(2);
 		params.add(new BasicNameValuePair("price", price + ""));
 		params.add(new BasicNameValuePair("currency", currency));
+		params.add(new BasicNameValuePair("nonce", this.nonce + ""));
+		this.nonce++;
 		return params;
 	}
 	
@@ -192,6 +261,8 @@ public class BitPay {
 		}
 		params.add(new BasicNameValuePair("price", price + ""));
 		params.add(new BasicNameValuePair("currency", currency));
+		params.add(new BasicNameValuePair("nonce", this.nonce + ""));
+		this.nonce++;
 		return params;
 	}
 

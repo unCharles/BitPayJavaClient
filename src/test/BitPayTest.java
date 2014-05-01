@@ -2,6 +2,8 @@ package test;
 
 import static org.junit.Assert.*;
 
+import java.security.PrivateKey;
+
 
 import model.BitPay;
 import model.Invoice;
@@ -18,14 +20,13 @@ public class BitPayTest {
 
 	private BitPay bitpay;
 	private Invoice basicInvoice;
-	private static String API_KEY = "YOUR_API_KEY";
 	private static double BTC_EPSILON = .000000001;
 	private static double EPSILON = .001;
 	
 	@Before
 	public void setUp() throws Exception {
-		this.bitpay = new BitPay(API_KEY);
-		
+		PrivateKey privateKey = null; // TODO
+		this.bitpay = new BitPay(privateKey);
 		basicInvoice = this.bitpay.createInvoice(100, "USD");
 	}
 
@@ -35,16 +36,12 @@ public class BitPayTest {
 
 	@Test
 	public void testShouldCreateInvoice100BTC() {
-		this.bitpay = new BitPay(API_KEY);
-		
 		Invoice invoice = this.bitpay.createInvoice(100, "BTC");
 		assertEquals(invoice.getBtcPrice(), 100.0, BTC_EPSILON);
 	}
 	
 	@Test
 	public void testShouldCreateInvoice100USD() {
-		this.bitpay = new BitPay(API_KEY);
-		
 		Invoice invoice = this.bitpay.createInvoice(100, "USD");
 		assertEquals(invoice.getPrice(), 100.0, EPSILON);
 	}
@@ -71,16 +68,12 @@ public class BitPayTest {
 
 	@Test
 	public void testShouldCreateInvoice100EUR() {
-		this.bitpay = new BitPay(API_KEY);
-		
 		Invoice invoice = this.bitpay.createInvoice(100, "EUR");
 		assertEquals(invoice.getPrice(), 100.0, EPSILON);
 	}
 	
 	@Test
 	public void testShouldGetInvoice() {
-		this.bitpay = new BitPay(API_KEY);
-		
 		Invoice invoice = this.bitpay.createInvoice(100, "EUR");
 
 		Invoice retreivedInvoice = this.bitpay.getInvoice(invoice.getId());
@@ -90,8 +83,6 @@ public class BitPayTest {
 	
 	@Test
 	public void testShouldCreateInvoiceWithAdditionalParams() {
-		this.bitpay = new BitPay(API_KEY);
-		
 		InvoiceParams params = new InvoiceParams();
 		params.setBuyerName("Satoshi");
 		params.setBuyerEmail("satoshi@bitpay.com");
@@ -109,8 +100,6 @@ public class BitPayTest {
 	
 	@Test
 	public void testShouldGetExchangeRates() {
-		this.bitpay = new BitPay(API_KEY);
-		
 		Rates rates = this.bitpay.getRates();
 		
 		JSONArray arrayRates = rates.getRates();
@@ -122,8 +111,6 @@ public class BitPayTest {
 	
 	@Test
 	public void testShouldGetUSDExchangeRate() {
-		this.bitpay = new BitPay(API_KEY);
-		
 		Rates rates = this.bitpay.getRates();
 		double rate = rates.getRate("USD");
 
@@ -132,8 +119,6 @@ public class BitPayTest {
 	
 	@Test
 	public void testShouldGetEURExchangeRate() {
-		this.bitpay = new BitPay(API_KEY);
-		
 		Rates rates = this.bitpay.getRates();
 		double rate = rates.getRate("EUR");
 		
@@ -142,8 +127,6 @@ public class BitPayTest {
 	
 	@Test
 	public void testShouldGetCNYExchangeRate() {
-		this.bitpay = new BitPay(API_KEY);
-		
 		Rates rates = this.bitpay.getRates();
 		double rate = rates.getRate("CNY");
 		
@@ -152,8 +135,6 @@ public class BitPayTest {
 	
 	@Test
 	public void testShouldUpdateExchangeRates() {
-		this.bitpay = new BitPay(API_KEY);
-		
 		Rates rates = this.bitpay.getRates();
 		
 		rates.update();
