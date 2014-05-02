@@ -8,6 +8,7 @@ import java.security.PrivateKey;
 import model.BitPay;
 import model.Invoice;
 import model.InvoiceParams;
+import model.KeyUtils;
 import model.Rates;
 
 import org.json.simple.JSONArray;
@@ -25,8 +26,10 @@ public class BitPayTest {
 	
 	@Before
 	public void setUp() throws Exception {
-		PrivateKey privateKey = null; // TODO
-		this.bitpay = new BitPay(privateKey);
+		String key64 = "";
+		String SIN = "";
+		PrivateKey privateKey = KeyUtils.loadPrivateKey(key64);
+		this.bitpay = new BitPay(privateKey, SIN);
 		basicInvoice = this.bitpay.createInvoice(100, "USD");
 	}
 

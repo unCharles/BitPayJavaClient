@@ -21,6 +21,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
 import java.security.*;  
 
+
 /**
  * 
  * @author Chaz Ferguson
@@ -29,11 +30,13 @@ import java.security.*;
  */
 public class BitPay {
 	
-	private static final String BASE_URL = "https://test.bp/";
+	private static final String BASE_URL = "https://test.bitpay.com/";
 	
 	private HttpClient client;
 	Signature signature;
+	PrivateKey privateKey;
 	long nonce;
+	String SIN;
 	
 	/**
 	 * Constructor.
@@ -43,7 +46,9 @@ public class BitPay {
 	 * @param currency
 	 * default currency code
 	 */
-	public BitPay(PrivateKey privateKey) {
+	public BitPay(PrivateKey privateKey, String SIN) {
+		com.sun.org.apache.xml.internal.security.Init.init();
+		this.SIN = SIN;
 		this.nonce = new Date().getTime();
 		try {
 			this.signature = Signature.getInstance("SHA256withRSA");
@@ -75,7 +80,7 @@ public class BitPay {
 			post.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
 			String signature = signData(url, params);
 			post.addHeader("x-signature", signature);
-			post.addHeader("x-pubkey", ""); // TODO
+			post.addHeader("x-pubkey", SIN);
 			
 			HttpResponse response = this.client.execute(post);
 			
@@ -116,7 +121,7 @@ public class BitPay {
 			post.setEntity(new UrlEncodedFormEntity(body, "UTF-8"));
 			String signature = signData(url, body);
 			post.addHeader("x-signature", signature);
-			post.addHeader("x-pubkey", ""); // TODO
+			post.addHeader("x-pubkey", SIN);
 			
 			HttpResponse response = this.client.execute(post);
 			
@@ -149,7 +154,7 @@ public class BitPay {
 		List<NameValuePair> body = this.getParams();
 		String sig = signData(url, body);
 		get.addHeader("x-signature", sig);
-		get.addHeader("x-pubkey", ""); // TODO
+		get.addHeader("x-pubkey", SIN);
 		
 		try {
 			HttpResponse response = client.execute(get);
@@ -181,7 +186,7 @@ public class BitPay {
 		List<NameValuePair> body = this.getParams();
 		String sig = signData(url, body);
 		post.addHeader("x-signature", sig);
-		post.addHeader("x-pubkey", ""); // TODO
+		post.addHeader("x-pubkey", SIN);
 		
 		try {
 			HttpResponse response = client.execute(post);
