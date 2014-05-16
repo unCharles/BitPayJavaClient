@@ -16,7 +16,7 @@ public class KeyUtils {
 		return new ECKey(new BigInteger(privateKey.getBytes()), new BigInteger(privateKey.getBytes()));
 	}
 	
-	public static String readStringFromFile(String filename) {
+	public static String readKeyFromFile(String filename) {
 		BufferedReader br;
 	    try {
 	    	br = new BufferedReader(new FileReader(filename));

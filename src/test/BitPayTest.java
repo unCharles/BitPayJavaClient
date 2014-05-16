@@ -19,15 +19,15 @@ public class BitPayTest {
 	private static double BTC_EPSILON = .000000001;
 	private static double EPSILON = .001;
 	
-	private static String SIN = "YOUR_SIN";
-	private static String privKeyFile = "priv.key.file";
-	private static String pubKeyFile = "pub.key.file";
+	private static String SIN = "key";
+	private static String privKeyFile = "key.priv";
+	private static String pubKeyFile = "key.pub";
 	
 	
 	@Before
 	public void setUp() throws Exception {
-		String privateKey = KeyUtils.readStringFromFile(privKeyFile);
-		String publicKey = KeyUtils.readStringFromFile(pubKeyFile);
+		String privateKey = KeyUtils.readKeyFromFile(privKeyFile);
+		String publicKey = KeyUtils.readKeyFromFile(pubKeyFile);
 		ECKey privKey = KeyUtils.loadKeys(privateKey, publicKey);
 		
 		this.bitpay = new BitPay(privKey, SIN);
