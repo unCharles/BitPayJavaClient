@@ -1,21 +1,16 @@
 package test;
 
 import static org.junit.Assert.*;
-
-import java.security.PrivateKey;
-
-
 import model.BitPay;
 import model.Invoice;
 import model.InvoiceParams;
 import model.KeyUtils;
 import model.Rates;
-
 import org.json.simple.JSONArray;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
+import com.google.bitcoin.core.ECKey;
 
 public class BitPayTest {
 
@@ -24,12 +19,18 @@ public class BitPayTest {
 	private static double BTC_EPSILON = .000000001;
 	private static double EPSILON = .001;
 	
+	private static String SIN = "YOUR_SIN";
+	private static String privKeyFile = "priv.key.file";
+	private static String pubKeyFile = "pub.key.file";
+	
+	
 	@Before
 	public void setUp() throws Exception {
-		String key64 = "";
-		String SIN = "";
-		PrivateKey privateKey = KeyUtils.loadPrivateKey(key64);
-		this.bitpay = new BitPay(privateKey, SIN);
+		String privateKey = KeyUtils.readStringFromFile(privKeyFile);
+		String publicKey = KeyUtils.readStringFromFile(pubKeyFile);
+		ECKey privKey = KeyUtils.loadKeys(privateKey, publicKey);
+		
+		this.bitpay = new BitPay(privKey, SIN);
 		basicInvoice = this.bitpay.createInvoice(100, "USD");
 	}
 

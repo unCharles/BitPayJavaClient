@@ -1,33 +1,35 @@
 package model;
 
-import java.security.GeneralSecurityException;
-import java.security.KeyFactory;
-import java.security.PrivateKey;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.Arrays;
-import com.sun.org.apache.xml.internal.security.exceptions.Base64DecodingException;
-import com.sun.org.apache.xml.internal.security.utils.Base64;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.math.BigInteger;
+import com.google.bitcoin.core.ECKey;
 
 public class KeyUtils {
 	
 	public KeyUtils() {
-		com.sun.org.apache.xml.internal.security.Init.init();	
+		
 	}
 	
-	public static PrivateKey loadPrivateKey(String key64) throws GeneralSecurityException {
-	    byte[] clear;
-		try {
-			clear = Base64.decode(key64);
-			PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(clear);
-		    KeyFactory fact = KeyFactory.getInstance("DSA");
-		    PrivateKey priv = fact.generatePrivate(keySpec);
-		    Arrays.fill(clear, (byte) 0);
-		    return priv;
-		} catch (Base64DecodingException e) {
-			// TODO Auto-generated catch block
+	public static ECKey loadKeys(String privateKey, String publicKey) {
+		return new ECKey(new BigInteger(privateKey.getBytes()), new BigInteger(privateKey.getBytes()));
+	}
+	
+	public static String readStringFromFile(String filename) {
+		BufferedReader br;
+	    try {
+	    	br = new BufferedReader(new FileReader(filename));
+	        String line = br.readLine();
+	        br.close();
+	        return line;
+	    } catch (IOException e) {
 			e.printStackTrace();
 		}
-	    return null;
+	    return "";
 	}
 	
+	public static String signString(ECKey key, String input) {
+		return key.signMessage(input);
+	}
 }

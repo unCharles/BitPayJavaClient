@@ -19,7 +19,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
-import java.security.*;  
+import com.google.bitcoin.core.ECKey;
 
 
 /**
@@ -33,8 +33,7 @@ public class BitPay {
 	private static final String BASE_URL = "https://test.bitpay.com/";
 	
 	private HttpClient client;
-	Signature signature;
-	PrivateKey privateKey;
+	ECKey privateKey;
 	long nonce;
 	String SIN;
 	
@@ -43,161 +42,60 @@ public class BitPay {
 	 * @param apiKey
 	 * Generated at BitPay.com. Merchant account required.
 	 * 
-	 * @param currency
-	 * default currency code
+	 * @param privateKey: Your ECDSA curve secp256k1 private key
+	 * @param SIN: The SIN derived from the private key.
 	 */
-	public BitPay(PrivateKey privateKey, String SIN) {
-		com.sun.org.apache.xml.internal.security.Init.init();
+	public BitPay(ECKey privateKey, String SIN) {
 		this.SIN = SIN;
 		this.nonce = new Date().getTime();
-		try {
-			this.signature = Signature.getInstance("SHA256withRSA");
-			signature.initSign(privateKey);
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		} catch (InvalidKeyException e) {
-			e.printStackTrace();
-		} 
+		this.privateKey = privateKey;
 		client = HttpClientBuilder.create().build();
 	}
 	
-	/**
-	 *  Creates an invoice using the BitPay Payment Gateway API
-	 * @param price - set in this.currency
-	 * @return Invoice
-	 */
+	public String submitKey(String accountEmail, String sin, String label) {
+		List<NameValuePair> params = this.getParams(accountEmail, sin, label);
+		String url = BASE_URL + "keys";
+		HttpResponse response = this.post(url, params);
+		return response.toString();
+	}
+	
 	public Invoice createInvoice(double price, String currency) {
 		if(currency.length() > 3) {
 			throw new IllegalArgumentException("Must be a valid currency code");
 		}
 		
 		String url = BASE_URL + "invoice";
-		
-		try {
-			HttpPost post = new HttpPost(url);
-			
-			List<NameValuePair> params = this.getParams(price, currency);
-			post.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
-			String signature = signData(url, params);
-			post.addHeader("x-signature", signature);
-			post.addHeader("x-pubkey", SIN);
-			
-			HttpResponse response = this.client.execute(post);
-			
-            return createInvoiceObjectFromResponse(response);
-            
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (ClientProtocolException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (JSONException e) {
-			e.printStackTrace();
-		}
-		
-		return null;
+		List<NameValuePair> params = this.getParams(price, currency);
+		HttpResponse response = this.post(url, params);
+		return createInvoiceObjectFromResponse(response);
 	}
 	
-	/**
-	 * Creates an invoice using the BitPay Payment Gateway API
-	 * 
-	 * @param price - set in this.currency
-	 * @param params - optional invoice parameters
-	 * @return Invoice
-	 */
-	public Invoice createInvoice(double price, String currency, InvoiceParams params) {
+	public Invoice createInvoice(double price, String currency, InvoiceParams optionalParams) {
 		if(currency.length() > 3) {
 			throw new IllegalArgumentException("Must be a valid currency code");
 		}
 		
 		String url = BASE_URL + "invoice";
-		
-		try {
-			HttpPost post = new HttpPost(url);
-			
-			post.addHeader("X-BitPay-Plugin-Info", "Javalib0.1.0");
-			List<NameValuePair> body = this.getParams(price, currency, params);
-			post.setEntity(new UrlEncodedFormEntity(body, "UTF-8"));
-			String signature = signData(url, body);
-			post.addHeader("x-signature", signature);
-			post.addHeader("x-pubkey", SIN);
-			
-			HttpResponse response = this.client.execute(post);
-			
-            return createInvoiceObjectFromResponse(response);
-            
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (ClientProtocolException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (JSONException e) {
-			e.printStackTrace();
-		}
-
-		return null;
+		List<NameValuePair> params = this.getParams(price, currency, optionalParams);
+		HttpResponse response = this.post(url, params);
+		return createInvoiceObjectFromResponse(response);
 	}
 	
-	/**
-	 * Get an existing Invoice by it's ID. The ID is used in the url:
-	 * "http://bitpay.com/invoice?id=<ID>"
-	 * @param invoiceId
-	 * @return Invoice
-	 */
+
 	public Invoice getInvoice(String invoiceId) {
 		String url = BASE_URL + "invoice/" + invoiceId;
+		List<NameValuePair> params = this.getParams();
 		
-		HttpGet get = new HttpGet(url);
-		
-		List<NameValuePair> body = this.getParams();
-		String sig = signData(url, body);
-		get.addHeader("x-signature", sig);
-		get.addHeader("x-pubkey", SIN);
-		
-		try {
-			HttpResponse response = client.execute(get);
-			
-	        return createInvoiceObjectFromResponse(response);
-
-		} catch (ClientProtocolException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (JSONException e) {
-			e.printStackTrace();
-		}
-
-		return null;
+		HttpResponse response = this.get(url, params);
+		return createInvoiceObjectFromResponse(response);
 	}
 	
-	/**
-	 * Submit a payout request.
-	 * "http://bitpay.com/invoice?id=<ID>"
-	 * @param invoiceId
-	 * @return Invoice
-	 */
 	public String submitPayoutRequest(PayoutRequest payoutRequest) {
+		// TODO
 		String url = BASE_URL + "payouts";
-		
-		HttpPost post = new HttpPost(url);
-		
-		List<NameValuePair> body = this.getParams();
-		String sig = signData(url, body);
-		post.addHeader("x-signature", sig);
-		post.addHeader("x-pubkey", SIN);
-		
-		try {
-			HttpResponse response = client.execute(post);
-	        return response.toString();
-		} catch (ClientProtocolException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return null;
+		List<NameValuePair> params = this.getParams();
+		HttpResponse response = this.post(url, params);
+		return response.toString();
 	}
 	
 	/**
@@ -230,20 +128,22 @@ public class BitPay {
 		}
 		data = data.substring(0,data.length() - 1);
 		data += "}";
-		byte[] dataInBytes = data.getBytes();  
-        try {
-			this.signature.update(dataInBytes);
-	        byte[] signedInfo = signature.sign();
-	        return signedInfo.toString();
-		} catch (SignatureException e) {
-			e.printStackTrace();
-		}
-        return "";       
+		return KeyUtils.signString(privateKey, data);
 	}
 
 	private List<NameValuePair> getParams() {
 		List<NameValuePair> params = new ArrayList<NameValuePair>(2);
 		params.add(new BasicNameValuePair("nonce", this.nonce + ""));
+		this.nonce++;
+		return params;
+	}
+	
+	private List<NameValuePair> getParams(String email, String sin, String label) {
+		List<NameValuePair> params = new ArrayList<NameValuePair>(2);
+		params.add(new BasicNameValuePair("nonce", this.nonce + ""));
+		params.add(new BasicNameValuePair("sin", sin));
+		params.add(new BasicNameValuePair("email", email));
+		params.add(new BasicNameValuePair("label", label));
 		this.nonce++;
 		return params;
 	}
@@ -271,24 +171,82 @@ public class BitPay {
 		return params;
 	}
 
-	private Invoice createInvoiceObjectFromResponse(HttpResponse response) throws IOException, JSONException {
-		BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
-		
-		StringBuilder content = new StringBuilder();
-		String line;
-		
-		while (null != (line = rd.readLine())) {
-		    content.append(line);
+	private HttpResponse post(String url, List<NameValuePair> params) {
+		try {
+			HttpPost post = new HttpPost(url);
+			post.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+			
+			String signature = signData(url, params);
+			post.addHeader("X-BitPay-Plugin-Info", "Javalib0.1.0");
+			post.addHeader("x-signature", signature);
+			post.addHeader("x-pubkey", SIN);
+			
+			HttpResponse response = this.client.execute(post);
+			
+	        return response;
+	        
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		} catch (ClientProtocolException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 		
-		Object obj=JSONValue.parse(content.toString());
-		JSONObject finalResult = (JSONObject)obj;
+		return null;
+	}
+
+	private HttpResponse get(String url, List<NameValuePair> params) {
+		HttpGet get = new HttpGet(url);
 		
-		if(finalResult.get("error") != null ){
-			System.out.println("Error: " + finalResult.get("error"));
+		String sig = signData(url, params);
+		get.addHeader("X-BitPay-Plugin-Info", "Javalib0.1.0");
+		get.addHeader("x-signature", sig);
+		get.addHeader("x-pubkey", SIN);
+		
+		try {
+			HttpResponse response = client.execute(get);
+			
+	        return response;
+	
+		} catch (ClientProtocolException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	
+		return null;
+	}
+
+	private Invoice createInvoiceObjectFromResponse(HttpResponse response) {
+		BufferedReader rd;
+		try {
+			rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+			StringBuilder content = new StringBuilder();
+			String line;
+			
+			while (null != (line = rd.readLine())) {
+			    content.append(line);
+			}
+			
+			Object obj=JSONValue.parse(content.toString());
+			JSONObject finalResult = (JSONObject)obj;
+			
+			if(finalResult.get("error") != null ){
+				System.out.println("Error: " + finalResult.get("error"));
+			}
+			
+			return new Invoice(finalResult);
+		} catch (IllegalStateException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (JSONException e) {
+			e.printStackTrace();
 		}
 		
-		return new Invoice(finalResult);
+		return null;
+	
 	};
 
 }
