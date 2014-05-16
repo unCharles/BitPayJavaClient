@@ -19,9 +19,9 @@ public class BitPayTest {
 	private static double BTC_EPSILON = .000000001;
 	private static double EPSILON = .001;
 	
-	private static String SIN = "TfGyiFNcaSHDmHPRrPdsQZgUHno2txkQtHQ";
-	private static String privKeyFile = "TfGyiFNcaSHDmHPRrPdsQZgUHno2txkQtHQ.priv";
-	private static String pubKeyFile = "TfGyiFNcaSHDmHPRrPdsQZgUHno2txkQtHQ.pub";
+	private static String SIN = "your_sin";
+	private static String privKeyFile = "api.priv";
+	private static String pubKeyFile = "api.pub";
 	
 	
 	@Before
