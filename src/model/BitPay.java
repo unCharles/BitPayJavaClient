@@ -37,14 +37,6 @@ public class BitPay {
 	long nonce;
 	String SIN;
 	
-	/**
-	 * Constructor.
-	 * @param apiKey
-	 * Generated at BitPay.com. Merchant account required.
-	 * 
-	 * @param privateKey: Your ECDSA curve secp256k1 private key
-	 * @param SIN: The SIN derived from the private key.
-	 */
 	public BitPay(ECKey privateKey, String SIN) {
 		this.SIN = SIN;
 		this.nonce = new Date().getTime();
@@ -98,10 +90,6 @@ public class BitPay {
 		return response.toString();
 	}
 	
-	/**
-	 * Get the current Bitcoin Exchange rates in dozens of currencies based on several exchanges.
-	 * @return Rates object.
-	 */
 	public Rates getRates() {
 		String url = BASE_URL + "rates";
 		
