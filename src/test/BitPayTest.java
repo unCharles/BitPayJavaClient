@@ -19,9 +19,9 @@ public class BitPayTest {
 	private static double BTC_EPSILON = .000000001;
 	private static double EPSILON = .001;
 	
-	private static String SIN = "TfGyiFNcaSHDmHPRrPdsQZgUHno2txkQtHQ";
-	private static String privKeyFile = "TfGyiFNcaSHDmHPRrPdsQZgUHno2txkQtHQ.priv";
-	private static String pubKeyFile = "TfGyiFNcaSHDmHPRrPdsQZgUHno2txkQtHQ.pub";
+	private static String SIN = "SIN";
+	private static String privKeyFile = "key.priv";
+	private static String pubKeyFile = "key.pub";
 	
 	
 	@Before
@@ -31,11 +31,18 @@ public class BitPayTest {
 		ECKey privKey = KeyUtils.loadKeys(privateKey, publicKey);
 		
 		this.bitpay = new BitPay(privKey, SIN);
-		basicInvoice = this.bitpay.createInvoice(100, "USD");
 	}
 
 	@After
 	public void tearDown() throws Exception {
+	}
+	
+	@Test
+	public void testShouldGetTokens() {
+		System.out.println("Get tokens");
+		String tokens = this.bitpay.getTokens();
+		System.out.println(tokens);
+		assertEquals(tokens, "null");
 	}
 
 	@Test

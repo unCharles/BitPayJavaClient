@@ -3,20 +3,24 @@ package model;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.math.BigInteger;
+
 import com.google.bitcoin.core.ECKey;
+import com.google.bitcoin.core.ECKey.ECDSASignature;
+import com.google.bitcoin.core.Sha256Hash;
 
 public class KeyUtils {
+	
+	final protected static char[] hexArray = "0123456789abcdef".toCharArray();
 	
 	public KeyUtils() {
 		
 	}
 	
 	public static ECKey loadKeys(String privateKey, String publicKey) {
-		publicKey = convertHexToString(publicKey);
-		privateKey = convertHexToString(privateKey);
+		BigInteger privKey = new BigInteger(privateKey, 16);
 		
-		ECKey key = null;
-		key = new ECKey(privateKey.getBytes(), publicKey.getBytes());
+		ECKey key = new ECKey(privKey, null, true);
 
 		return key;
 	}
@@ -34,16 +38,26 @@ public class KeyUtils {
 	    return "";
 	}
 	
+	
 	public static String signString(ECKey key, String input) {
-		return key.signMessage(input);
+		System.out.println("Signing string: " + input);
+		byte[] data = input.getBytes();
+        //byte[] data = Utils.formatMessageForSigning(input);
+        Sha256Hash hash = Sha256Hash.create(data);
+        ECDSASignature sig = key.sign(hash, null);
+        byte[] bytes = sig.encodeToDER();
+        
+        return bytesToHex(bytes);
 	}
 	
-	private static String convertHexToString(String hex) {
-	    StringBuilder output = new StringBuilder();
-	    for (int i = 0; i < hex.length(); i+=2) {
-	        String str = hex.substring(i, i+2);
-	        output.append((char)Integer.parseInt(str, 16));
+	public static String bytesToHex(byte[] bytes) {
+	    char[] hexChars = new char[bytes.length * 2];
+	    for ( int j = 0; j < bytes.length; j++ ) {
+	        int v = bytes[j] & 0xFF;
+	        hexChars[j * 2] = hexArray[v >>> 4];
+	        hexChars[j * 2 + 1] = hexArray[v & 0x0F];
 	    }
-	    return output.toString();
+	    return new String(hexChars);
 	}
+
 }
