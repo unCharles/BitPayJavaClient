@@ -75,9 +75,8 @@ public class BitPay {
 	
 	public JSONObject submitKey(String accountEmail, String sin, String label) {
 		List<NameValuePair> params = this.getParams(accountEmail, sin, label);
-		params.add(new BasicNameValuePair("token", this.merchantToken));
 		String url = baseUrl + "keys";
-		HttpResponse response = this.post(url, params);
+		HttpResponse response = this.post(url, params, false);
 		return responseToObject(response);
 	}
 
@@ -119,7 +118,7 @@ public class BitPay {
 		String url = baseUrl + "invoices";
 		List<NameValuePair> params = this.getParams(price, currency);
 		params.add(new BasicNameValuePair("token", this.merchantToken));
-		HttpResponse response = this.post(url, params);
+		HttpResponse response = this.post(url, params, true);
 		JSONObject obj = responseToObject(response);
 		try {
 			JSONObject invoiceData = (JSONObject)obj.get("data");
@@ -138,7 +137,7 @@ public class BitPay {
 		String url = baseUrl + "invoices";
 		List<NameValuePair> params = this.getParams(price, currency, optionalParams);
 		params.add(new BasicNameValuePair("token", this.merchantToken));
-		HttpResponse response = this.post(url, params);
+		HttpResponse response = this.post(url, params, true);
 		JSONObject obj = responseToObject(response);
 		try {
 			JSONObject invoiceData = (JSONObject)obj.get("data");
@@ -151,7 +150,6 @@ public class BitPay {
 	
 
 	public Invoice getInvoice(String invoiceId, String token) {
-		System.out.println(invoiceId + "   " + token);
 		String url = baseUrl + "invoices/" + invoiceId;
 		List<NameValuePair> params = this.getParams();
 		params.add(new BasicNameValuePair("token", this.merchantToken));
@@ -194,7 +192,7 @@ public class BitPay {
 		// TODO
 		String url = baseUrl + "payouts";
 		List<NameValuePair> params = this.getParams();
-		HttpResponse response = this.post(url, params);
+		HttpResponse response = this.post(url, params, true);
 		return response.toString();
 	}
 	
@@ -282,16 +280,19 @@ public class BitPay {
 		return params;
 	}
 
-	private HttpResponse post(String url, List<NameValuePair> params) {
+	private HttpResponse post(String url, List<NameValuePair> params, Boolean requiresSignature) {
 		try {
 			params.add(new BasicNameValuePair("guid", this.getGuid()));
 			JSONObject json = (JSONObject)new JSONParser().parse(toJsonString(params));
 			HttpPost post = new HttpPost(url);
 		    post.setEntity(new ByteArrayEntity(json.toString().getBytes("UTF8")));
-			String signature = signData(url, params);
+		    if (requiresSignature) {
+		    	String signature = signData(url, params);
+		    	post.addHeader("x-signature", signature);
+		    	post.addHeader("x-pubkey", KeyUtils.bytesToHex(privateKey.getPubKey()));
+		    }
 			post.addHeader("X-BitPay-Plugin-Info", "Javalib0.1.0");
-			post.addHeader("x-signature", signature);
-			post.addHeader("x-pubkey", KeyUtils.bytesToHex(privateKey.getPubKey()));
+			
 			post.addHeader("Content-Type","application/json");
 			
 			HttpResponse response = this.client.execute(post);
@@ -316,7 +317,6 @@ public class BitPay {
 			fullURL += params.get(i).getName() + "=" + params.get(i).getValue() + "&";
 		}
 		fullURL = fullURL.substring(0,fullURL.length() - 1);
-		System.out.println(fullURL);
 		try {
 			HttpGet get = new HttpGet(fullURL);
 			

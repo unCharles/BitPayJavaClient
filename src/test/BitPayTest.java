@@ -2,7 +2,6 @@ package test;
 
 import static org.junit.Assert.*;
 
-import java.util.Date;
 import java.util.List;
 
 import model.Invoice;
@@ -29,10 +28,10 @@ public class BitPayTest {
 	//private static double BTC_EPSILON = .000000001;
 	private static double EPSILON = .001;
 	
-	private static String SIN = "";
-	private static String privKeyFile = ".priv";
-	private static String pubKeyFile = ".pub";
-	private static String accountEmail = "";
+	private static String SIN = "TfGVVuQeW2p2eazrpTC825nwWgXywXSv6ux";
+	private static String privKeyFile = "TfGVVuQeW2p2eazrpTC825nwWgXywXSv6ux.priv";
+	private static String pubKeyFile = "TfGVVuQeW2p2eazrpTC825nwWgXywXSv6ux.pub";
+	private static String accountEmail = "chaz@bitpay.com";
 	
 	
 	@Before
@@ -57,7 +56,7 @@ public class BitPayTest {
 	@Test
 	public void testShouldSubmitKey() {
 		JSONObject response = this.bitpay.submitKey(accountEmail, SIN, "test");
-		assertTrue(response.get("data") instanceof JSONArray);
+		assertTrue(response.get("data") instanceof JSONObject);
 	}
 
 	@Test

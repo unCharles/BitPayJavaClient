@@ -19,7 +19,6 @@ public class Invoice {
 	private String token;
 	
 	public Invoice(JSONObject invoiceData) throws JSONException{
-		System.out.println(invoiceData.toJSONString());
 		this.id = (String) invoiceData.get("id");
 		this.url = (String) invoiceData.get("url");
 		this.status = (String) invoiceData.get("status");
