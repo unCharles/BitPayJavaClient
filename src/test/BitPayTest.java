@@ -1,27 +1,38 @@
 package test;
 
 import static org.junit.Assert.*;
-import model.BitPay;
+
+import java.util.Date;
+import java.util.List;
+
 import model.Invoice;
-import model.InvoiceParams;
-import model.KeyUtils;
 import model.Rates;
 import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import com.google.bitcoin.core.ECKey;
 
+import controller.BitPay;
+import controller.KeyUtils;
+
+/**
+ * In order for tests to pass, the SIN must be approved, 
+ * and associated to an account with access to the 
+ * merchant resource.
+ */
 public class BitPayTest {
 
 	private BitPay bitpay;
 	private Invoice basicInvoice;
-	private static double BTC_EPSILON = .000000001;
+	//private static double BTC_EPSILON = .000000001;
 	private static double EPSILON = .001;
 	
-	private static String SIN = "SIN";
-	private static String privKeyFile = "key.priv";
-	private static String pubKeyFile = "key.pub";
+	private static String SIN = "";
+	private static String privKeyFile = ".priv";
+	private static String pubKeyFile = ".pub";
+	private static String accountEmail = "";
 	
 	
 	@Before
@@ -39,18 +50,22 @@ public class BitPayTest {
 	
 	@Test
 	public void testShouldGetTokens() {
-		System.out.println("Get tokens");
-		String tokens = this.bitpay.getTokens();
-		System.out.println(tokens);
-		assertEquals(tokens, "null");
+		JSONObject tokens = this.bitpay.getTokens();
+		assertTrue(tokens.get("data") instanceof JSONArray);
+	}
+
+	@Test
+	public void testShouldSubmitKey() {
+		JSONObject response = this.bitpay.submitKey(accountEmail, SIN, "test");
+		assertTrue(response.get("data") instanceof JSONArray);
 	}
 
 	@Test
 	public void testShouldCreateInvoice100BTC() {
 		Invoice invoice = this.bitpay.createInvoice(100, "BTC");
-		assertEquals(invoice.getBtcPrice(), 100.0, BTC_EPSILON);
+		assertEquals("BTC", invoice.getCurrency());
 	}
-	
+
 	@Test
 	public void testShouldCreateInvoice100USD() {
 		Invoice invoice = this.bitpay.createInvoice(100, "USD");
@@ -59,21 +74,25 @@ public class BitPayTest {
 	
 	@Test
 	public void testShouldGetInvoiceId() {
+		basicInvoice = bitpay.createInvoice(50, "USD");
 		assertNotNull(basicInvoice.getId());
 	}
 	
 	@Test
 	public void testShouldGetInvoiceURL() {
+		basicInvoice = bitpay.createInvoice(50, "USD");
 		assertNotNull(basicInvoice.getUrl());
 	}
 	
 	@Test
-	public void testShouldGetInvoiceStatusL() {
+	public void testShouldGetInvoiceStatus() {
+		basicInvoice = bitpay.createInvoice(50, "USD");
 		assertNotNull(basicInvoice.getStatus());
 	}
 	
 	@Test
 	public void testShouldGetInvoiceBTCPrice() {
+		basicInvoice = bitpay.createInvoice(50, "USD");
 		assertNotNull(basicInvoice.getBtcPrice());
 	}
 
@@ -86,37 +105,20 @@ public class BitPayTest {
 	@Test
 	public void testShouldGetInvoice() {
 		Invoice invoice = this.bitpay.createInvoice(100, "EUR");
-
-		Invoice retreivedInvoice = this.bitpay.getInvoice(invoice.getId());
-		
+		Invoice retreivedInvoice = this.bitpay.getInvoice(invoice.getId(), invoice.getToken());
 		assertEquals(invoice.getId(), retreivedInvoice.getId());
 	}
 	
 	@Test
-	public void testShouldCreateInvoiceWithAdditionalParams() {
-		InvoiceParams params = new InvoiceParams();
-		params.setBuyerName("Satoshi");
-		params.setBuyerEmail("satoshi@bitpay.com");
-		params.setFullNotifications(true);
-		params.setNotificationEmail("satoshi@bitpay.com");
-		
-		Invoice invoice = this.bitpay.createInvoice(100, "USD", params);
-		
-		//Print to verify the information is on the invoice.
-		System.out.println(invoice.getUrl());
-		
-		assertNotNull(invoice);
+	public void testShouldGetInvoices() {
+		List<Invoice> invoices = this.bitpay.getInvoices("2014-01-01");
+		assertTrue(invoices.size() > 0);
 	}
-
 	
 	@Test
 	public void testShouldGetExchangeRates() {
 		Rates rates = this.bitpay.getRates();
-		
-		JSONArray arrayRates = rates.getRates();
-		
-		System.out.println("Exchange Rates: " + arrayRates);
-		
+		JSONArray arrayRates = rates.getRates();		
 		assertNotNull(arrayRates);
 	}
 	
@@ -124,7 +126,6 @@ public class BitPayTest {
 	public void testShouldGetUSDExchangeRate() {
 		Rates rates = this.bitpay.getRates();
 		double rate = rates.getRate("USD");
-
 		assertTrue(rate != 0);
 	}
 	
@@ -132,7 +133,6 @@ public class BitPayTest {
 	public void testShouldGetEURExchangeRate() {
 		Rates rates = this.bitpay.getRates();
 		double rate = rates.getRate("EUR");
-		
 		assertTrue(rate != 0);
 	}
 	
@@ -140,18 +140,14 @@ public class BitPayTest {
 	public void testShouldGetCNYExchangeRate() {
 		Rates rates = this.bitpay.getRates();
 		double rate = rates.getRate("CNY");
-		
 		assertTrue(rate != 0);
 	}
 	
 	@Test
 	public void testShouldUpdateExchangeRates() {
 		Rates rates = this.bitpay.getRates();
-		
 		rates.update();
-		
 		JSONArray arrayRates = rates.getRates();
-		
 		assertNotNull(arrayRates);
 	}
 

@@ -1,4 +1,4 @@
-package model;
+package controller;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -40,13 +40,10 @@ public class KeyUtils {
 	
 	
 	public static String signString(ECKey key, String input) {
-		System.out.println("Signing string: " + input);
 		byte[] data = input.getBytes();
-        //byte[] data = Utils.formatMessageForSigning(input);
         Sha256Hash hash = Sha256Hash.create(data);
         ECDSASignature sig = key.sign(hash, null);
         byte[] bytes = sig.encodeToDER();
-        
         return bytesToHex(bytes);
 	}
 	

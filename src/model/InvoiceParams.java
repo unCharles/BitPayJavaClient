@@ -45,7 +45,7 @@ public class InvoiceParams {
 	 * 
 	 * This passthru variable can be a JSON-encoded string, for example
 	 * 
-	 * posData: ‘ { “ref” : 711454, “affiliate” : “spring112” } ‘
+	 * posData: ��� { ���ref��� : 711454, ���affiliate��� : ���spring112��� } ���
 	 * 
 	 */
 	public String getPosData() {
@@ -59,7 +59,7 @@ public class InvoiceParams {
 	 * 
 	 * This passthru variable can be a JSON-encoded string, for example
 	 * 
-	 * posData: ‘ { “ref” : 711454, “affiliate” : “spring112” } ‘
+	 * posData: ��� { ���ref��� : 711454, ���affiliate��� : ���spring112��� } ���
 	 * 
 	 */
 	public void setPosData(String posData) {
@@ -96,13 +96,13 @@ public class InvoiceParams {
 	 * 
 	 default value: set in your https://bitpay.com/order-settings
 	 * 
-	 * “high” : An invoice is considered to be "confirmed" immediately upon
+	 * ���high��� : An invoice is considered to be "confirmed" immediately upon
 	 * receipt of payment.
 	 * 
-	 * “medium” : An invoice is considered to be "confirmed" after 1 block
+	 * ���medium��� : An invoice is considered to be "confirmed" after 1 block
 	 * confirmation (~10 minutes).
 	 * 
-	 * “low” : An invoice is considered to be "confirmed" after 6 block
+	 * ���low��� : An invoice is considered to be "confirmed" after 6 block
 	 * confirmations (~1 hour).
 	 * 
 	 * NOTE: Orders are posted to
@@ -115,13 +115,13 @@ public class InvoiceParams {
 	 * 
 	 default value: set in your https://bitpay.com/order-settings
 	 * 
-	 * “high” : An invoice is considered to be "confirmed" immediately upon
+	 * ���high��� : An invoice is considered to be "confirmed" immediately upon
 	 * receipt of payment.
 	 * 
-	 * “medium” : An invoice is considered to be "confirmed" after 1 block
+	 * ���medium��� : An invoice is considered to be "confirmed" after 1 block
 	 * confirmation (~10 minutes).
 	 * 
-	 * “low” : An invoice is considered to be "confirmed" after 6 block
+	 * ���low��� : An invoice is considered to be "confirmed" after 6 block
 	 * confirmations (~1 hour).
 	 * 
 	 * NOTE: Orders are posted to
@@ -445,10 +445,10 @@ public class InvoiceParams {
 		params.add(new BasicNameValuePair("fullNotifications", String.valueOf(this.fullNotifications)));
 		
 		if (this.notificationURL != null) {
-			params.add(new BasicNameValuePair("notificationURL", this.notificationURL));
+			params.add(new BasicNameValuePair("notificationURL", this.notificationURL + ""));
 		}
 		if (this.transactionSpeed != null) {
-			params.add(new BasicNameValuePair("transactionSpeed", this.transactionSpeed));
+			params.add(new BasicNameValuePair("transactionSpeed", this.transactionSpeed + ""));
 		}
 		if (this.posData != null) {
 			params.add(new BasicNameValuePair("posData", this.posData));
@@ -460,13 +460,13 @@ public class InvoiceParams {
 			params.add(new BasicNameValuePair("redirectURL", this.redirectURL));
 		}
 		if (this.orderId != null) {
-			params.add(new BasicNameValuePair("orderID", this.orderId));
+			params.add(new BasicNameValuePair("orderID", this.orderId + ""));
 		}
 		if (this.itemDesc != null) {
 			params.add(new BasicNameValuePair("itemDesc", this.itemDesc));
 		}
 		if (this.itemCode != null) {
-			params.add(new BasicNameValuePair("itemCode", this.itemCode));
+			params.add(new BasicNameValuePair("itemCode", this.itemCode + ""));
 		}
 		if (this.buyerName != null) {
 			params.add(new BasicNameValuePair("buyerName", this.buyerName));
@@ -484,7 +484,7 @@ public class InvoiceParams {
 			params.add(new BasicNameValuePair("buyerState", this.buyerState));
 		}
 		if (this.buyerZip != null) {
-			params.add(new BasicNameValuePair("buyerZip", this.buyerZip));
+			params.add(new BasicNameValuePair("buyerZip", this.buyerZip + ""));
 		}
 		if (this.buyerCountry != null) {
 			params.add(new BasicNameValuePair("buyerCountry", this.buyerCountry));

@@ -1,13 +1,10 @@
 package model;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-
-import org.apache.http.HttpResponse;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
+
+import controller.BitPay;
+
 
 /**
  * 
@@ -25,27 +22,9 @@ public class Rates {
 	 * @param The Raw HTTP Response from BitPay api/rates call.
 	 * @param bp - used to update self
 	 */
-	public Rates(HttpResponse response, BitPay bp) {
-		BufferedReader rd;
-		try {
-			rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
-			StringBuilder content = new StringBuilder();
-			String line;
-			
-			while (null != (line = rd.readLine())) {
-			    content.append(line);
-			}
-			
-			Object obj=JSONValue.parse(content.toString());
-			JSONArray rates = (JSONArray)obj;
+	public Rates(JSONArray rates, BitPay bp) {
 			this.rates = rates;
 			this.bp = bp;
-			
-		} catch (IllegalStateException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 	
 	/**
