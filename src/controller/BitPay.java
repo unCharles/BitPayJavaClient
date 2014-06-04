@@ -54,7 +54,32 @@ public class BitPay {
 	ECKey privateKey;
 	long nonce;
 	String SIN;
-	String merchantToken;
+	
+	public BitPay(){
+		this.baseUrl = "https://test.bitpay.com/";
+		this.nonce = new Date().getTime();
+		if(KeyUtils.privateKeyExists()){
+			try {
+				this.privateKey = KeyUtils.readExistingKey();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		} else {
+			this.privateKey = KeyUtils.generateNewECKey();
+			try {
+				KeyUtils.saveECKey(this.privateKey);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		this.SIN = KeyUtils.deriveSIN(this.privateKey);
+		client = HttpClientBuilder.create().build();
+	}
+
+	public BitPay(String accountEmail, String deviceLabel) {
+		this();
+		this.submitKey(accountEmail, deviceLabel);
+	}
 	
 	public BitPay(ECKey privateKey, String SIN) {
 		this.baseUrl = "https://test.bitpay.com/";
@@ -62,7 +87,6 @@ public class BitPay {
 		this.nonce = new Date().getTime();
 		this.privateKey = privateKey;
 		client = HttpClientBuilder.create().build();
-		this.merchantToken = this.getToken(this.getTokens(), "merchant");
 	}
 	
 	public BitPay(ECKey privateKey, String SIN, String envUrl) {
@@ -73,11 +97,17 @@ public class BitPay {
 		client = HttpClientBuilder.create().build();
 	}
 	
-	public JSONObject submitKey(String accountEmail, String sin, String label) {
-		List<NameValuePair> params = this.getParams(accountEmail, sin, label);
+	public String getSIN() {
+		return this.SIN;
+	}
+	
+	public JSONObject submitKey(String accountEmail, String label) {
+		List<NameValuePair> params = this.getParams(accountEmail, this.SIN, label);
 		String url = baseUrl + "keys";
 		HttpResponse response = this.post(url, params, false);
-		return responseToObject(response);
+		JSONObject obj = responseToObject(response);
+		System.out.println(obj);
+		return obj;
 	}
 
 	public JSONObject getKeys() {
@@ -91,7 +121,9 @@ public class BitPay {
 		List<NameValuePair> params = this.getParams();
 		String url = baseUrl + "tokens";
 		HttpResponse response = this.get(url, params);
-		return responseToObject(response);
+		JSONObject obj = responseToObject(response);
+		System.out.println("Tokens: " +obj);
+		return obj;
 	}
 	
 	public String getToken(JSONObject dataObject, String key) {
@@ -117,7 +149,7 @@ public class BitPay {
 		
 		String url = baseUrl + "invoices";
 		List<NameValuePair> params = this.getParams(price, currency);
-		params.add(new BasicNameValuePair("token", this.merchantToken));
+		params.add(new BasicNameValuePair("token", this.getToken(this.getTokens(), "merchant")));
 		HttpResponse response = this.post(url, params, true);
 		JSONObject obj = responseToObject(response);
 		try {
@@ -136,7 +168,7 @@ public class BitPay {
 		
 		String url = baseUrl + "invoices";
 		List<NameValuePair> params = this.getParams(price, currency, optionalParams);
-		params.add(new BasicNameValuePair("token", this.merchantToken));
+		params.add(new BasicNameValuePair("token", this.getToken(this.getTokens(), "merchant")));
 		HttpResponse response = this.post(url, params, true);
 		JSONObject obj = responseToObject(response);
 		try {
@@ -149,10 +181,10 @@ public class BitPay {
 	}
 	
 
-	public Invoice getInvoice(String invoiceId, String token) {
+	public Invoice getInvoice(String invoiceId) {
 		String url = baseUrl + "invoices/" + invoiceId;
 		List<NameValuePair> params = this.getParams();
-		params.add(new BasicNameValuePair("token", this.merchantToken));
+		params.add(new BasicNameValuePair("token", this.getToken(this.getTokens(), "merchant")));
 		HttpResponse response = this.get(url, params);
 		JSONObject obj = responseToObject(response);
 		try {
@@ -172,7 +204,7 @@ public class BitPay {
 		String url = baseUrl + "invoices/";
 		List<NameValuePair> params = this.getParams();
 		params.add(new BasicNameValuePair("dateStart", javascriptDateString));
-		params.add(new BasicNameValuePair("token", this.merchantToken));
+		params.add(new BasicNameValuePair("token", this.getToken(this.getTokens(), "merchant")));
 		HttpResponse response = this.get(url, params);
 		JSONObject obj = responseToObject(response);
 		try {
@@ -188,12 +220,13 @@ public class BitPay {
 		return null;
 	}
 	
-	public String submitPayoutRequest(PayoutRequest payoutRequest) {
-		// TODO
+	public JSONObject submitPayoutRequest(PayoutRequest payoutRequest) {
 		String url = baseUrl + "payouts";
 		List<NameValuePair> params = this.getParams();
+		params.add(new BasicNameValuePair("token", this.getToken(this.getTokens(), "payroll")));
 		HttpResponse response = this.post(url, params, true);
-		return response.toString();
+		System.out.println(responseToObject(response));
+		return responseToObject(response);
 	}
 	
 	public Rates getRates() {
@@ -317,6 +350,7 @@ public class BitPay {
 			fullURL += params.get(i).getName() + "=" + params.get(i).getValue() + "&";
 		}
 		fullURL = fullURL.substring(0,fullURL.length() - 1);
+		System.out.println(fullURL);
 		try {
 			HttpGet get = new HttpGet(fullURL);
 			
@@ -344,22 +378,6 @@ public class BitPay {
 			if(finalResult.containsKey("error")) {
 				System.out.println("Error: " + finalResult.get("error"));
 			}
-			return finalResult;
-		} catch (ParseException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		System.out.println("Could not create a JSONObject from the HttpResponse.");
-		return null;
-	}
-	
-	private JSONArray responseToArray(HttpResponse response) {
-		HttpEntity entity = response.getEntity();
-		try {
-			String responseString = EntityUtils.toString(entity, "UTF-8");
-			Object obj=JSONValue.parse(responseString);
-			JSONArray finalResult = (JSONArray)obj;
 			return finalResult;
 		} catch (ParseException e) {
 			e.printStackTrace();
