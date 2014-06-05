@@ -9,8 +9,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.math.BigInteger;
+import java.util.Arrays;
 
-import com.google.bitcoin.core.Base58;
+import com.google.bitcoin.core.*;
 import com.google.bitcoin.core.ECKey;
 import com.google.bitcoin.core.ECKey.ECDSASignature;
 import com.google.bitcoin.core.Sha256Hash;
@@ -20,7 +21,7 @@ public class KeyUtils {
 	final protected static char[] hexArray = "0123456789abcdef".toCharArray();
 	final protected static String PRIV_KEY_FILENAME = "bitpay_private.key";
 	public KeyUtils() {
-		
+
 	}
 	
 	public static ECKey loadKey(String privateKey) {
@@ -62,10 +63,18 @@ public class KeyUtils {
 	    return new String(hexChars);
 	}
 	
+	public static String hexToString(String hex) {
+	    StringBuilder output = new StringBuilder();
+	    for (int i = 0; i < hex.length(); i+=2) {
+	        String str = hex.substring(i, i+2);
+	        output.append((char)Integer.parseInt(str, 16));
+	    }
+	    return output.toString();
+	}
+	
 	public static String deriveSIN(ECKey key) {
 		//Get sha256 hash of the public key.
 		byte[] pubKeyHash = key.getPubKeyHash(); //Gets the hash160 form of the public key
-		
 		//Convert binary pubKeyHash, SINtype and version to Hex
 		String SINtype = "02";
 		String version = "0F";
@@ -82,15 +91,15 @@ public class KeyUtils {
 		byte[] hash2Bytes = hash2.getBytes();
 		
 		//Convert back to hex and take first 4 bytes
-		String hashString = bytesToHex(hash2Bytes);
-		String first4Bytes = hashString.substring(0, 8);
+		String first4Bytes = bytesToHex(Arrays.copyOfRange(hash2Bytes, 0, 4));
 		
 		//Append first 4 bytes to fully appended sin string
 		String unencoded = preSIN + first4Bytes;
 		byte[] unencodedBytes = new BigInteger(unencoded,16).toByteArray();
-		String encoded = Base58.encode(unencodedBytes);
-		
-		return encoded;
+
+		//String encoded = Base58.encode(unencodedBytes);
+		String SIN = Base58.encode(unencodedBytes);
+		return SIN;
 	}
 
 	public static ECKey readExistingKey() throws IOException {
@@ -99,6 +108,7 @@ public class KeyUtils {
 		f.read(bytes);
 		f.close();
 		ECKey key = ECKey.fromASN1(bytes);
+
 		return key;
 	}
 

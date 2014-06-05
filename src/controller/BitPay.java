@@ -54,8 +54,13 @@ public class BitPay {
 	ECKey privateKey;
 	long nonce;
 	String SIN;
+	JSONArray tokens;
 	
-	public BitPay(){
+	/*
+	 * This constructor currently creates an invalid Private Key. 
+	 * Please generate a key with Bitcore and use the appropriate constructor.
+	 */
+	public BitPay() {
 		this.baseUrl = "https://test.bitpay.com/";
 		this.nonce = new Date().getTime();
 		if(KeyUtils.privateKeyExists()){
@@ -74,6 +79,7 @@ public class BitPay {
 		}
 		this.SIN = KeyUtils.deriveSIN(this.privateKey);
 		client = HttpClientBuilder.create().build();
+		this.tokens = this.getTokens();
 	}
 
 	public BitPay(String accountEmail, String deviceLabel) {
@@ -81,20 +87,22 @@ public class BitPay {
 		this.submitKey(accountEmail, deviceLabel);
 	}
 	
-	public BitPay(ECKey privateKey, String SIN) {
+	public BitPay(ECKey privateKey) {
 		this.baseUrl = "https://test.bitpay.com/";
-		this.SIN = SIN;
 		this.nonce = new Date().getTime();
 		this.privateKey = privateKey;
+		this.SIN = KeyUtils.deriveSIN(this.privateKey);
 		client = HttpClientBuilder.create().build();
+		this.tokens = this.getTokens();
 	}
 	
-	public BitPay(ECKey privateKey, String SIN, String envUrl) {
+	public BitPay(ECKey privateKey, String envUrl) {
 		this.baseUrl = envUrl;
-		this.SIN = SIN;
 		this.nonce = new Date().getTime();
 		this.privateKey = privateKey;
+		this.SIN = KeyUtils.deriveSIN(this.privateKey);
 		client = HttpClientBuilder.create().build();
+		this.tokens = this.getTokens();
 	}
 	
 	public String getSIN() {
@@ -106,7 +114,6 @@ public class BitPay {
 		String url = baseUrl + "keys";
 		HttpResponse response = this.post(url, params, false);
 		JSONObject obj = responseToObject(response);
-		System.out.println(obj);
 		return obj;
 	}
 
@@ -117,39 +124,37 @@ public class BitPay {
 		return responseToObject(response);
 	}
 	
-	public JSONObject getTokens() {
+	public JSONArray getTokens() {
 		List<NameValuePair> params = this.getParams();
 		String url = baseUrl + "tokens";
 		HttpResponse response = this.get(url, params);
 		JSONObject obj = responseToObject(response);
-		System.out.println("Tokens: " +obj);
-		return obj;
+		JSONArray output = (JSONArray)obj.get("data");
+		return output;
 	}
 	
-	public String getToken(JSONObject dataObject, String key) {
-		if (!dataObject.containsKey("data")){
-			System.out.println("Object does not contain data array.");
-			return null;
-		}
+	public String getToken(String key) throws BitPayException {
 		String tokenValue = "";
-		JSONArray tokens = (JSONArray)dataObject.get("data");
-		for(Object obj : tokens) {
+		for(Object obj : this.tokens) {
 			JSONObject token = (JSONObject)obj;
 			if(token.containsKey(key)){
 				tokenValue = (String)token.get(key);
 			}
 		}
+		if (tokenValue.length() == 0) {
+			throw new BitPayException("You do not have Access to " + key + " resource.");
+		}
 		return tokenValue;
 	}
 	
-	public Invoice createInvoice(double price, String currency) {
+	public Invoice createInvoice(double price, String currency) throws BitPayException {
 		if(currency.length() > 3) {
 			throw new IllegalArgumentException("Must be a valid currency code");
 		}
 		
 		String url = baseUrl + "invoices";
 		List<NameValuePair> params = this.getParams(price, currency);
-		params.add(new BasicNameValuePair("token", this.getToken(this.getTokens(), "merchant")));
+		params.add(new BasicNameValuePair("token", this.getToken("merchant")));
 		HttpResponse response = this.post(url, params, true);
 		JSONObject obj = responseToObject(response);
 		try {
@@ -161,14 +166,14 @@ public class BitPay {
 		return null;
 	}
 	
-	public Invoice createInvoice(double price, String currency, InvoiceParams optionalParams) {
+	public Invoice createInvoice(double price, String currency, InvoiceParams optionalParams) throws BitPayException {
 		if(currency.length() > 3) {
 			throw new IllegalArgumentException("Must be a valid currency code");
 		}
 		
 		String url = baseUrl + "invoices";
 		List<NameValuePair> params = this.getParams(price, currency, optionalParams);
-		params.add(new BasicNameValuePair("token", this.getToken(this.getTokens(), "merchant")));
+		params.add(new BasicNameValuePair("token", this.getToken("merchant")));
 		HttpResponse response = this.post(url, params, true);
 		JSONObject obj = responseToObject(response);
 		try {
@@ -181,10 +186,10 @@ public class BitPay {
 	}
 	
 
-	public Invoice getInvoice(String invoiceId) {
+	public Invoice getInvoice(String invoiceId) throws BitPayException {
 		String url = baseUrl + "invoices/" + invoiceId;
 		List<NameValuePair> params = this.getParams();
-		params.add(new BasicNameValuePair("token", this.getToken(this.getTokens(), "merchant")));
+		params.add(new BasicNameValuePair("token", this.getToken("merchant")));
 		HttpResponse response = this.get(url, params);
 		JSONObject obj = responseToObject(response);
 		try {
@@ -200,11 +205,11 @@ public class BitPay {
 		return null;
 	}
 	
-	public List<Invoice> getInvoices(String javascriptDateString) {
+	public List<Invoice> getInvoices(String javascriptDateString) throws BitPayException {
 		String url = baseUrl + "invoices/";
 		List<NameValuePair> params = this.getParams();
 		params.add(new BasicNameValuePair("dateStart", javascriptDateString));
-		params.add(new BasicNameValuePair("token", this.getToken(this.getTokens(), "merchant")));
+		params.add(new BasicNameValuePair("token", this.getToken("merchant")));
 		HttpResponse response = this.get(url, params);
 		JSONObject obj = responseToObject(response);
 		try {
@@ -220,10 +225,10 @@ public class BitPay {
 		return null;
 	}
 	
-	public JSONObject submitPayoutRequest(PayoutRequest payoutRequest) {
+	public JSONObject submitPayoutRequest(PayoutRequest payoutRequest) throws BitPayException {
 		String url = baseUrl + "payouts";
 		List<NameValuePair> params = this.getParams();
-		params.add(new BasicNameValuePair("token", this.getToken(this.getTokens(), "payroll")));
+		params.add(new BasicNameValuePair("token", this.getToken("payroll")));
 		HttpResponse response = this.post(url, params, true);
 		System.out.println(responseToObject(response));
 		return responseToObject(response);
@@ -350,7 +355,6 @@ public class BitPay {
 			fullURL += params.get(i).getName() + "=" + params.get(i).getValue() + "&";
 		}
 		fullURL = fullURL.substring(0,fullURL.length() - 1);
-		System.out.println(fullURL);
 		try {
 			HttpGet get = new HttpGet(fullURL);
 			
