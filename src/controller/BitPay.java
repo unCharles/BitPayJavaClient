@@ -57,8 +57,10 @@ public class BitPay {
 	JSONArray tokens;
 	
 	/*
-	 * This constructor currently creates an invalid Private Key. 
-	 * Please generate a key with Bitcore and use the appropriate constructor.
+	 * This constructor currently creates an invalid SIN.
+	 * 
+	 * Please generate a key with Bitcore and use the 
+	 * BitPay(ECKey key, String sin) constructor
 	 */
 	public BitPay() {
 		this.baseUrl = "https://test.bitpay.com/";
@@ -87,6 +89,12 @@ public class BitPay {
 		this.submitKey(accountEmail, deviceLabel);
 	}
 	
+	/*
+	 * This constructor currently creates an invalid SIN.
+	 * 
+	 * Please generate a key with Bitcore and use the 
+	 * BitPay(ECKey key, String sin) constructor
+	 */
 	public BitPay(ECKey privateKey) {
 		this.baseUrl = "https://test.bitpay.com/";
 		this.nonce = new Date().getTime();
@@ -96,11 +104,12 @@ public class BitPay {
 		this.tokens = this.getTokens();
 	}
 	
-	public BitPay(ECKey privateKey, String envUrl) {
-		this.baseUrl = envUrl;
+	
+	public BitPay(ECKey privateKey, String SIN) {
+		this.baseUrl = "https://test.bitpay.com/";
 		this.nonce = new Date().getTime();
 		this.privateKey = privateKey;
-		this.SIN = KeyUtils.deriveSIN(this.privateKey);
+		this.SIN = SIN;
 		client = HttpClientBuilder.create().build();
 		this.tokens = this.getTokens();
 	}
@@ -109,6 +118,9 @@ public class BitPay {
 		return this.SIN;
 	}
 	
+	public void setEnv(String env){
+		this.baseUrl = env;
+	}
 	public JSONObject submitKey(String accountEmail, String label) {
 		List<NameValuePair> params = this.getParams(accountEmail, this.SIN, label);
 		String url = baseUrl + "keys";

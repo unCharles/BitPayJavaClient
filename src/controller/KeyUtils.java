@@ -20,15 +20,14 @@ public class KeyUtils {
 	
 	final protected static char[] hexArray = "0123456789abcdef".toCharArray();
 	final protected static String PRIV_KEY_FILENAME = "bitpay_private.key";
+	
 	public KeyUtils() {
 
 	}
 	
 	public static ECKey loadKey(String privateKey) {
 		BigInteger privKey = new BigInteger(privateKey, 16);
-		
 		ECKey key = new ECKey(privKey, null, true);
-
 		return key;
 	}
 	
@@ -99,6 +98,7 @@ public class KeyUtils {
 
 		//String encoded = Base58.encode(unencodedBytes);
 		String SIN = Base58.encode(unencodedBytes);
+		System.out.println(SIN);
 		return SIN;
 	}
 

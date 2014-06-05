@@ -1,6 +1,8 @@
 package test;
 
 import static org.junit.Assert.*;
+
+import java.util.Date;
 import java.util.List;
 import model.Invoice;
 import model.PayoutRequest;
@@ -25,17 +27,18 @@ public class BitPayTest {
 
 	private BitPay bitpay;
 	private Invoice basicInvoice;
-	private static String privateKeyFile = "Tf531KADwiZCgpC4cUQYvQLmRTt4K4LAXub.priv";
+	private static String privateKeyFile = "key.txt";
+	private static String SIN = "SIN";
 	//private static double BTC_EPSILON = .000000001;
 	private static double EPSILON = .001;
-	private static String accountEmail = "chaz@bitpay.com";
+	private static String accountEmail = "";
 	
 	
 	@Before
 	public void setUp() throws Exception {
 		String privateKey = KeyUtils.readBitcoreKeyFromFile(privateKeyFile);
 		ECKey key = KeyUtils.loadKey(privateKey);
-		this.bitpay = new BitPay(key);
+		this.bitpay = new BitPay(key, SIN);
 	}
 
 	@After
@@ -211,6 +214,9 @@ public class BitPayTest {
 	public void testShouldCreatePayoutRequest() {
 		PayoutRequest payoutRequest = new PayoutRequest();
 		payoutRequest.addInstruction(1, "n1cf9z1dpf5GANHpJ2tNefYByvBsCFELae");
+		payoutRequest.setAmount(1);
+		payoutRequest.setCurrency("BTC");
+		payoutRequest.setEffectiveDate(new Date());
 		
 		JSONObject response = null;
 		try {
