@@ -57,17 +57,16 @@ public class BitPay {
 	JSONArray tokens;
 	
 	/*
-	 * This constructor currently creates an invalid SIN.
-	 * 
-	 * Please generate a key with Bitcore and use the 
-	 * BitPay(ECKey key, String sin) constructor
+	 * Default constructor. Loads the access keys from file, or 
+	 * generates them if they don't exist.
+	 * [WORK IN PROGRESS]
 	 */
 	public BitPay() {
 		this.baseUrl = "https://test.bitpay.com/";
 		this.nonce = new Date().getTime();
 		if(KeyUtils.privateKeyExists()){
 			try {
-				this.privateKey = KeyUtils.readExistingKey();
+				this.privateKey = KeyUtils.readKeyFromASN1();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -84,16 +83,11 @@ public class BitPay {
 		this.tokens = this.getTokens();
 	}
 
-	public BitPay(String accountEmail, String deviceLabel) {
-		this();
-		this.submitKey(accountEmail, deviceLabel);
-	}
 	
 	/*
-	 * This constructor currently creates an invalid SIN.
-	 * 
-	 * Please generate a key with Bitcore and use the 
-	 * BitPay(ECKey key, String sin) constructor
+	 * Constructor to pass your own ECKey.
+	 * @param: ECKey privateKey - the Java implementation of an 
+	 * Elliptic Curve Key in the BitcoinJ library.
 	 */
 	public BitPay(ECKey privateKey) {
 		this.baseUrl = "https://test.bitpay.com/";
@@ -104,23 +98,58 @@ public class BitPay {
 		this.tokens = this.getTokens();
 	}
 	
-	
-	public BitPay(ECKey privateKey, String SIN) {
+	/*
+	 * Constructor that takes a hex encoded private key
+	 * and the derived SIN.
+	 * 
+	 * @param	privateKey	hex encoded string representation
+	 * of a bitcoin private key.
+	 * @param SIN	the derived SIN from the public key.
+	 */
+	public BitPay(String privateKey, String SIN) {
+		ECKey key = KeyUtils.loadKey(privateKey);
 		this.baseUrl = "https://test.bitpay.com/";
 		this.nonce = new Date().getTime();
-		this.privateKey = privateKey;
+		this.privateKey = key;
 		this.SIN = SIN;
 		client = HttpClientBuilder.create().build();
 		this.tokens = this.getTokens();
 	}
 	
+	/*
+	 * Initialize the device with your account email and a label for the device.
+	 * Then log into your account to approve the key before the device can be used.
+	 * You only have to run this once.
+	 * 
+	 * Alias for submitKey.
+	 * 
+	 * @param	accountEmail	your BitPay account email
+	 * @param	deviceLabel	an identifier for the device
+	 */
+	public void init(String accountEmail, String deviceLabel) {
+		this.submitKey(accountEmail, deviceLabel);
+	}
+	
+	/*
+	 * Returns the SIN derived from the public key.
+	 */
 	public String getSIN() {
 		return this.SIN;
 	}
 	
+	/*
+	 * Set the environment URL. The default is test.bitpay.com.
+	 * To use in production, set to https://bitpay.com
+	 * 
+	 * @param env	the URL of the environment
+	 */
 	public void setEnv(String env){
 		this.baseUrl = env;
 	}
+	
+	/*
+	 * Submit your SIN for approval.
+	 */
 	public JSONObject submitKey(String accountEmail, String label) {
 		List<NameValuePair> params = this.getParams(accountEmail, this.SIN, label);
 		String url = baseUrl + "keys";

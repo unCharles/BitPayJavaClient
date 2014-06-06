@@ -36,9 +36,8 @@ public class BitPayTest {
 	
 	@Before
 	public void setUp() throws Exception {
-		String privateKey = KeyUtils.readBitcoreKeyFromFile(privateKeyFile);
-		ECKey key = KeyUtils.loadKey(privateKey);
-		this.bitpay = new BitPay(key, SIN);
+		String privateKey = KeyUtils.readCompressedHexKey(privateKeyFile);
+		this.bitpay = new BitPay(privateKey, SIN);
 	}
 
 	@After

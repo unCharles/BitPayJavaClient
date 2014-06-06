@@ -25,13 +25,27 @@ public class KeyUtils {
 
 	}
 	
+	/*
+	 * Accepts a hex encoded string representation of the compressed
+	 * private key.
+	 * 
+	 * @param	String privateKey	Hex Encoded String representation of
+	 * a bitcoin private key.
+	 * 
+	 * @return	ECKey
+	 */
 	public static ECKey loadKey(String privateKey) {
 		BigInteger privKey = new BigInteger(privateKey, 16);
 		ECKey key = new ECKey(privKey, null, true);
 		return key;
 	}
 	
-	public static String readBitcoreKeyFromFile(String filename) {
+	/*
+	 * Read a compressed hex encoded bitcoin private key from file.
+	 * 
+	 * @param	filename	the filename of the hex encoded private key
+	 */
+	public static String readCompressedHexKey(String filename) {
 		BufferedReader br;
 	    try {
 	    	br = new BufferedReader(new FileReader(filename));
@@ -44,6 +58,14 @@ public class KeyUtils {
 	    return "";
 	}
 	
+	/*
+	 * Sign a string with the bitcoin private key
+	 * 
+	 * @param	key	ECKey- bitcoin private key
+	 * @param	input	the string you want to sign
+	 * 
+	 * @return	the signature
+	 */
 	public static String signString(ECKey key, String input) {
 		byte[] data = input.getBytes();
         Sha256Hash hash = Sha256Hash.create(data);
@@ -52,6 +74,12 @@ public class KeyUtils {
         return bytesToHex(bytes);
 	}
 	
+	/*
+	 * Convert a byte array to a hex encoded string
+	 * 
+	 * @param	bytes	the bytes to encode
+	 * @return	a hex encoded string
+	 */
 	public static String bytesToHex(byte[] bytes) {
 	    char[] hexChars = new char[bytes.length * 2];
 	    for ( int j = 0; j < bytes.length; j++ ) {
@@ -62,15 +90,14 @@ public class KeyUtils {
 	    return new String(hexChars);
 	}
 	
-	public static String hexToString(String hex) {
-	    StringBuilder output = new StringBuilder();
-	    for (int i = 0; i < hex.length(); i+=2) {
-	        String str = hex.substring(i, i+2);
-	        output.append((char)Integer.parseInt(str, 16));
-	    }
-	    return output.toString();
-	}
-	
+	/*
+	 * Derive a SIN from a public key
+	 * 
+	 * @param	key	your private ECKey
+	 * 
+	 * @return SIN. a string starting with the letter T that is derived from your
+	 * public key
+	 */
 	public static String deriveSIN(ECKey key) {
 		//Get sha256 hash of the public key.
 		byte[] pubKeyHash = key.getPubKeyHash(); //Gets the hash160 form of the public key
@@ -102,7 +129,7 @@ public class KeyUtils {
 		return SIN;
 	}
 
-	public static ECKey readExistingKey() throws IOException {
+	public static ECKey readKeyFromASN1() throws IOException {
 		RandomAccessFile f = new RandomAccessFile(PRIV_KEY_FILENAME, "r");
 		byte[] bytes = new byte[(int)f.length()];
 		f.read(bytes);
