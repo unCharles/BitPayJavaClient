@@ -15,8 +15,6 @@ import org.junit.Test;
 import controller.BitPay;
 import controller.BitPayException;
 import controller.KeyUtils;
-import com.google.bitcoin.core.ECKey;
-
 
 /**
  * In order for tests to pass, the SIN must be approved, 
@@ -27,11 +25,10 @@ public class BitPayTest {
 
 	private BitPay bitpay;
 	private Invoice basicInvoice;
-	private static String privateKeyFile = "key.txt";
-	private static String SIN = "SIN";
-	//private static double BTC_EPSILON = .000000001;
+	private static String privateKeyFile = "Tf7i29HyynPvm5pscReUEV5c2T7d4Po4kJX";
+	private static String SIN = "Tf7i29HyynPvm5pscReUEV5c2T7d4Po4kJX";
 	private static double EPSILON = .001;
-	private static String accountEmail = "";
+	private static String accountEmail = "chaz@bitpay.com";
 	
 	
 	@Before
@@ -50,10 +47,7 @@ public class BitPayTest {
 		assertNotNull(this.bitpay.getSIN());
 	}
 	
-	@Test
-	public void testShouldGenerateAndSaveValidPrivateKey() {
-		
-	}
+
 
 	@Test
 	public void testShouldSubmitKey() {
@@ -68,6 +62,7 @@ public class BitPayTest {
 		assertTrue(tokens instanceof JSONArray);
 		
 	}
+
 
 	@Test
 	public void testShouldCreateInvoice100BTC() {
