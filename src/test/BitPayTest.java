@@ -204,21 +204,4 @@ public class BitPayTest {
 		assertNotNull(arrayRates);
 	}
 
-	@Test
-	public void testShouldCreatePayoutRequest() {
-		PayoutRequest payoutRequest = new PayoutRequest();
-		payoutRequest.addInstruction(1, "n1cf9z1dpf5GANHpJ2tNefYByvBsCFELae");
-		payoutRequest.setAmount(1);
-		payoutRequest.setCurrency("BTC");
-		payoutRequest.setEffectiveDate(new Date());
-		
-		JSONObject response = null;
-		try {
-			response = this.bitpay.submitPayoutRequest(payoutRequest);
-		} catch (BitPayException e) {
-			e.printStackTrace();
-		}
-		assertNotNull(response);
-	}
-
 }

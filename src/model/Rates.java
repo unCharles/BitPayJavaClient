@@ -53,7 +53,11 @@ public class Rates {
 		for (Object rate : this.rates) {
 			JSONObject obj = (JSONObject) rate;
 			if (obj.get("code").equals(currencyCode)) {
-				val = (Double) obj.get("rate");
+				try {
+					val = (Double) obj.get("rate");
+				} catch(ClassCastException e) {
+					val = ((Long)obj.get("rate")).doubleValue();
+				}
 			}
 		}
 		return val;

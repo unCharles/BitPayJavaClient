@@ -57,48 +57,6 @@ public class BitPay {
 	JSONArray tokens;
 	
 	/*
-	 * Default constructor. Loads the access keys from file, or 
-	 * generates them if they don't exist.
-	 * [WORK IN PROGRESS]
-	 */
-	public BitPay() {
-		this.baseUrl = "https://test.bitpay.com/";
-		this.nonce = new Date().getTime();
-		if(KeyUtils.privateKeyExists()){
-			try {
-				this.privateKey = KeyUtils.readKeyFromASN1();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		} else {
-			this.privateKey = KeyUtils.generateNewECKey();
-			try {
-				KeyUtils.saveECKey(this.privateKey);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		this.SIN = KeyUtils.deriveSIN(this.privateKey);
-		client = HttpClientBuilder.create().build();
-		this.tokens = this.getTokens();
-	}
-
-	
-	/*
-	 * Constructor to pass your own ECKey.
-	 * @param: ECKey privateKey - the Java implementation of an 
-	 * Elliptic Curve Key in the BitcoinJ library.
-	 */
-	public BitPay(ECKey privateKey) {
-		this.baseUrl = "https://test.bitpay.com/";
-		this.nonce = new Date().getTime();
-		this.privateKey = privateKey;
-		this.SIN = KeyUtils.deriveSIN(this.privateKey);
-		client = HttpClientBuilder.create().build();
-		this.tokens = this.getTokens();
-	}
-	
-	/*
 	 * Constructor that takes a hex encoded private key
 	 * and the derived SIN.
 	 * 
@@ -114,20 +72,6 @@ public class BitPay {
 		this.SIN = SIN;
 		client = HttpClientBuilder.create().build();
 		this.tokens = this.getTokens();
-	}
-	
-	/*
-	 * Initialize the device with your account email and a label for the device.
-	 * Then log into your account to approve the key before the device can be used.
-	 * You only have to run this once.
-	 * 
-	 * Alias for submitKey.
-	 * 
-	 * @param	accountEmail	your BitPay account email
-	 * @param	deviceLabel	an identifier for the device
-	 */
-	public void init(String accountEmail, String deviceLabel) {
-		this.submitKey(accountEmail, deviceLabel);
 	}
 	
 	/*
