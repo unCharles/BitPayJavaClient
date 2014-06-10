@@ -1,4 +1,4 @@
-BitPayJavaAPI
+BitPayJavaClient
 =============
 
 This is a Java client library for the BitPay Payment Gateway
@@ -16,10 +16,12 @@ json-simple
 Getting Started
 ---------------
 
-Log into your BitPay merchant account and generate an API key. Then all you need to do is instantiate a BitPay object, and pass in your API key and the default currency code.
+Log into your BitPay merchant account and generate a Private Key and SIN. Then all you need to do is instantiate a BitPay object, and pass in your private key and the SIN.
 
 ```java
-Bitpay bitpay = new Bitpay("API_KEY");
+String privateKey = KeyUtils.readBitcoreKeyFromFile(privateKeyFile);
+ECKey key = KeyUtils.loadKey(privateKey);
+this.bitpay = new BitPay(key, SIN);
 ```
 
 ####Create an invoice
