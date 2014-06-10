@@ -14,17 +14,18 @@ public class Invoice {
 	private String url;
 	private String status;
 	private String btcPrice;
-	private String price;
+	private Long price;
 	private String currency;
+	private String token;
 	
-	public Invoice(JSONObject finalResult) throws JSONException{
-		
-		this.id = (String) finalResult.get("id");
-		this.url = (String) finalResult.get("url");
-		this.status = (String) finalResult.get("status");
-		this.btcPrice = (String) finalResult.get("btcPrice");
-		this.price = finalResult.get("price").toString();
-		this.currency = (String) finalResult.get("currency");
+	public Invoice(JSONObject invoiceData) throws JSONException{
+		this.id = (String) invoiceData.get("id");
+		this.url = (String) invoiceData.get("url");
+		this.status = (String) invoiceData.get("status");
+		this.btcPrice = (String) invoiceData.get("btcPrice");
+		this.price = (Long) invoiceData.get("price");
+		this.currency = (String) invoiceData.get("currency");
+		this.token = (String) invoiceData.get("token");
 	}
 	
 	public String getId() {
@@ -39,18 +40,20 @@ public class Invoice {
 		return status;
 	}
 
-	public double getBtcPrice() {
-		double val = Double.parseDouble(this.btcPrice);
-		return val;
+	public String getBtcPrice() {
+		return btcPrice;
 	}
 
-	public double getPrice() {
-		double val = Double.parseDouble(this.price);
-		return val;
+	public Long getPrice() {
+		return price;
 	}
 
 	public String getCurrency() {
 		return currency;
+	}
+
+	public String getToken() {
+		return this.token;
 	}
 
 }

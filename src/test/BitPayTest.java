@@ -2,164 +2,205 @@ package test;
 
 import static org.junit.Assert.*;
 
-
-import model.BitPay;
+import java.util.Date;
+import java.util.List;
 import model.Invoice;
-import model.InvoiceParams;
+import model.PayoutRequest;
 import model.Rates;
-
 import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import controller.BitPay;
+import controller.BitPayException;
+import controller.KeyUtils;
 
-
+/**
+ * In order for tests to pass, the SIN must be approved, 
+ * and associated to an account with access to the 
+ * merchant resource.
+ */
 public class BitPayTest {
 
 	private BitPay bitpay;
 	private Invoice basicInvoice;
-	private static String API_KEY = "YOUR_API_KEY";
-	private static double BTC_EPSILON = .000000001;
+	private static String privateKeyFile = "Tf7i29HyynPvm5pscReUEV5c2T7d4Po4kJX";
+	private static String SIN = "Tf7i29HyynPvm5pscReUEV5c2T7d4Po4kJX";
 	private static double EPSILON = .001;
+	private static String accountEmail = "chaz@bitpay.com";
+	
 	
 	@Before
 	public void setUp() throws Exception {
-		this.bitpay = new BitPay(API_KEY);
-		
-		basicInvoice = this.bitpay.createInvoice(100, "USD");
+		String privateKey = KeyUtils.readCompressedHexKey(privateKeyFile);
+		this.bitpay = new BitPay(privateKey, SIN);
 	}
 
 	@After
 	public void tearDown() throws Exception {
 	}
+	
+	
+	@Test
+	public void testShouldGenerateAndSubmitValidKey(){
+		assertNotNull(this.bitpay.getSIN());
+	}
+	
+
 
 	@Test
-	public void testShouldCreateInvoice100BTC() {
-		this.bitpay = new BitPay(API_KEY);
-		
-		Invoice invoice = this.bitpay.createInvoice(100, "BTC");
-		assertEquals(invoice.getBtcPrice(), 100.0, BTC_EPSILON);
+	public void testShouldSubmitKey() {
+		JSONObject response = this.bitpay.submitKey(accountEmail, "test");
+		assertTrue(response.get("data") instanceof JSONObject);
 	}
 	
 	@Test
-	public void testShouldCreateInvoice100USD() {
-		this.bitpay = new BitPay(API_KEY);
+	public void testShouldGetTokens() {
+		JSONArray tokens = null;
+		tokens = this.bitpay.getTokens();
+		assertTrue(tokens instanceof JSONArray);
 		
-		Invoice invoice = this.bitpay.createInvoice(100, "USD");
+	}
+
+
+	@Test
+	public void testShouldCreateInvoice100BTC() {
+		Invoice invoice = null;
+		try {
+			invoice = this.bitpay.createInvoice(100, "BTC");
+		} catch (BitPayException e) {
+			e.printStackTrace();
+		}
+		assertEquals("BTC", invoice.getCurrency());
+		
+	}
+
+	@Test
+	public void testShouldCreateInvoice100USD() {
+		Invoice invoice = null;
+		try {
+			invoice = this.bitpay.createInvoice(100, "USD");
+		} catch (BitPayException e) {
+			e.printStackTrace();
+		}
 		assertEquals(invoice.getPrice(), 100.0, EPSILON);
+		
 	}
 	
 	@Test
 	public void testShouldGetInvoiceId() {
+		try {
+			basicInvoice = bitpay.createInvoice(50, "USD");
+		} catch (BitPayException e) {
+			e.printStackTrace();
+		}
 		assertNotNull(basicInvoice.getId());
 	}
 	
 	@Test
 	public void testShouldGetInvoiceURL() {
+		try {
+			basicInvoice = bitpay.createInvoice(50, "USD");
+		} catch (BitPayException e) {
+			e.printStackTrace();
+		}
 		assertNotNull(basicInvoice.getUrl());
+		
 	}
 	
 	@Test
-	public void testShouldGetInvoiceStatusL() {
+	public void testShouldGetInvoiceStatus() {
+		try {
+			basicInvoice = bitpay.createInvoice(50, "USD");
+		} catch (BitPayException e) {
+			e.printStackTrace();
+		}
 		assertNotNull(basicInvoice.getStatus());
+		
 	}
 	
 	@Test
 	public void testShouldGetInvoiceBTCPrice() {
+		try {
+			basicInvoice = bitpay.createInvoice(50, "USD");
+		} catch (BitPayException e) {
+			e.printStackTrace();
+		}
 		assertNotNull(basicInvoice.getBtcPrice());
+		
 	}
 
 	@Test
 	public void testShouldCreateInvoice100EUR() {
-		this.bitpay = new BitPay(API_KEY);
-		
-		Invoice invoice = this.bitpay.createInvoice(100, "EUR");
+		Invoice invoice = null;
+		try {
+			invoice = this.bitpay.createInvoice(100, "EUR");
+		} catch (BitPayException e) {
+			e.printStackTrace();
+		}
 		assertEquals(invoice.getPrice(), 100.0, EPSILON);
+		
 	}
 	
 	@Test
 	public void testShouldGetInvoice() {
-		this.bitpay = new BitPay(API_KEY);
-		
-		Invoice invoice = this.bitpay.createInvoice(100, "EUR");
-
-		Invoice retreivedInvoice = this.bitpay.getInvoice(invoice.getId());
-		
+		Invoice invoice = null;
+		Invoice retreivedInvoice = null;
+		try {
+			invoice = this.bitpay.createInvoice(100, "EUR");
+			retreivedInvoice = this.bitpay.getInvoice(invoice.getId());
+		} catch (BitPayException e) {
+			e.printStackTrace();
+		}
 		assertEquals(invoice.getId(), retreivedInvoice.getId());
+		
 	}
 	
 	@Test
-	public void testShouldCreateInvoiceWithAdditionalParams() {
-		this.bitpay = new BitPay(API_KEY);
-		
-		InvoiceParams params = new InvoiceParams();
-		params.setBuyerName("Satoshi");
-		params.setBuyerEmail("satoshi@bitpay.com");
-		params.setFullNotifications(true);
-		params.setNotificationEmail("satoshi@bitpay.com");
-		
-		Invoice invoice = this.bitpay.createInvoice(100, "USD", params);
-		
-		//Print to verify the information is on the invoice.
-		System.out.println(invoice.getUrl());
-		
-		assertNotNull(invoice);
+	public void testShouldGetInvoices() {
+		List<Invoice> invoices = null;
+		try {
+			invoices = this.bitpay.getInvoices("2014-01-01");
+		} catch (BitPayException e) {
+			e.printStackTrace();
+		}
+		assertTrue(invoices.size() > 0);
 	}
-
 	
 	@Test
 	public void testShouldGetExchangeRates() {
-		this.bitpay = new BitPay(API_KEY);
-		
 		Rates rates = this.bitpay.getRates();
-		
-		JSONArray arrayRates = rates.getRates();
-		
-		System.out.println("Exchange Rates: " + arrayRates);
-		
+		JSONArray arrayRates = rates.getRates();		
 		assertNotNull(arrayRates);
 	}
 	
 	@Test
 	public void testShouldGetUSDExchangeRate() {
-		this.bitpay = new BitPay(API_KEY);
-		
 		Rates rates = this.bitpay.getRates();
 		double rate = rates.getRate("USD");
-
 		assertTrue(rate != 0);
 	}
 	
 	@Test
 	public void testShouldGetEURExchangeRate() {
-		this.bitpay = new BitPay(API_KEY);
-		
 		Rates rates = this.bitpay.getRates();
 		double rate = rates.getRate("EUR");
-		
 		assertTrue(rate != 0);
 	}
 	
 	@Test
 	public void testShouldGetCNYExchangeRate() {
-		this.bitpay = new BitPay(API_KEY);
-		
 		Rates rates = this.bitpay.getRates();
 		double rate = rates.getRate("CNY");
-		
 		assertTrue(rate != 0);
 	}
 	
 	@Test
 	public void testShouldUpdateExchangeRates() {
-		this.bitpay = new BitPay(API_KEY);
-		
 		Rates rates = this.bitpay.getRates();
-		
 		rates.update();
-		
 		JSONArray arrayRates = rates.getRates();
-		
 		assertNotNull(arrayRates);
 	}
 
