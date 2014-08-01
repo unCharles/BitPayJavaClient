@@ -8,6 +8,7 @@ import java.util.List;
 
 import model.Invoice;
 import model.InvoiceParams;
+import model.LedgerEntry;
 import model.PayoutRequest;
 import model.Rates;
 
@@ -28,6 +29,7 @@ import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
+
 import com.google.bitcoin.core.ECKey;
 
 /**
@@ -236,6 +238,28 @@ public class BitPay {
 		}
 		return null;
 	}
+
+	public List<LedgerEntry> getLedger(String currency, String startDate, String endDate) throws BitPayException {
+		String url = baseUrl + "ledgers/" + currency;
+		List<NameValuePair> params = this.getParams();
+		params.add(new BasicNameValuePair("startDate", startDate));
+		params.add(new BasicNameValuePair("endDate", endDate));
+		params.add(new BasicNameValuePair("token", this.getToken("merchant")));
+		HttpResponse response = this.get(url, params);
+		JSONObject obj = responseToObject(response);
+		try {
+			List<LedgerEntry> ledger = new ArrayList<LedgerEntry>();
+			JSONArray ledgerEntryObjs = (JSONArray)obj.get("data");
+			for(Object ledgerEntryObj : ledgerEntryObjs){
+				ledger.add(new LedgerEntry((JSONObject)ledgerEntryObj));
+			}
+			return ledger;
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
 	
 	private String signData(String url) {
 		return KeyUtils.signString(privateKey, url);
