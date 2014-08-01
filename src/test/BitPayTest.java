@@ -2,16 +2,20 @@ package test;
 
 import static org.junit.Assert.*;
 
-import java.util.Date;
+//import java.util.Date;
 import java.util.List;
+
 import model.Invoice;
-import model.PayoutRequest;
+import model.LedgerEntry;
+//import model.PayoutRequest;
 import model.Rates;
+
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
 import controller.BitPay;
 import controller.BitPayException;
 import controller.KeyUtils;
@@ -25,10 +29,10 @@ public class BitPayTest {
 
 	private BitPay bitpay;
 	private Invoice basicInvoice;
-	private static String privateKeyFile = "Tf7i29HyynPvm5pscReUEV5c2T7d4Po4kJX";
-	private static String SIN = "Tf7i29HyynPvm5pscReUEV5c2T7d4Po4kJX";
+	private static String privateKeyFile = "/Users/Andy/Downloads/TexYxGT9Y7Umif3PiPy8fjfyCesDL6ybQty.priv";
+	private static String SIN = "TexYxGT9Y7Umif3PiPy8fjfyCesDL6ybQty";
 	private static double EPSILON = .001;
-	private static String accountEmail = "chaz@bitpay.com";
+	private static String accountEmail = "andy@bitpay.com";
 	
 	
 	@Before
@@ -167,7 +171,18 @@ public class BitPayTest {
 		}
 		assertTrue(invoices.size() > 0);
 	}
-	
+
+	@Test
+	public void testShouldGetLedgerBTC() {
+		List<LedgerEntry> ledger = null;
+		try {
+			ledger = this.bitpay.getLedger("BTC", "2014-01-01", "2014-12-31");
+		} catch (BitPayException e) {
+			e.printStackTrace();
+		}
+		assertNotNull(ledger);
+	}
+
 	@Test
 	public void testShouldGetExchangeRates() {
 		Rates rates = this.bitpay.getRates();

@@ -13,6 +13,10 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/3"/>
-	<classpathentry kind="lib" path="/Users/chaz/Workspace/bitcoinj/core/target/bitcoinj-0.12-SNAPSHOT-bundled.jar"/>
+	<classpathentry kind="lib" path="lib/bitcoinj-0.12-SNAPSHOT.jar"/>
+	<classpathentry kind="lib" path="lib/core-1.51.0.0.jar"/>
+	<classpathentry kind="lib" path="lib/slf4j-simple-1.7.7.jar"/>
+	<classpathentry kind="lib" path="lib/slf4j-api-1.7.7.jar"/>
+	<classpathentry kind="lib" path="lib/com.google.common_1.0.0.201004262004.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
