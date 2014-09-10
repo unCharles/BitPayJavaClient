@@ -9,24 +9,26 @@ BitPay merchant account
 
 ApacheHttpClient
 
-java-json
-
-json-simple
+Jackson Annotations, Core, Databind (download and install this package)
 
 Getting Started
 ---------------
 
-Log into your BitPay merchant account and generate a Private Key and SIN. Then all you need to do is instantiate a BitPay object, and pass in your private key and the SIN.
+Log into your BitPay merchant account and generate a pairing code. Then all you need to do is instantiate a BitPay object, and call authorizeClient() passing your pairing code.  The first time the BitPay object is instantiated a new BitPay identity for the client is created and stored locally on the client in a file 'bitpay_private.key' (this file is encrypted).
 
 ```java
-String privateKey = KeyUtils.readBitcoreKeyFromFile(privateKeyFile);
-ECKey key = KeyUtils.loadKey(privateKey);
-this.bitpay = new BitPay(key, SIN);
+bitpay = new BitPay(clientName);
+if (!bitpay.clientIsAuthorized(BitPay.FACADE_POS))
+{
+    bitpay.authorizeClient(pairingCode);
+}
 ```
 
 ####Create an invoice
 ```java
-Invoice invoice = bitpay.createInvoice(100, "USD");
+Invoice invoice = new Invoice(100.0, "USD");
+
+invoice = bitpay.createInvoice(invoice);
 
 String invoiceUrl = invoice.getURL();
 
@@ -35,7 +37,7 @@ String status = invoice.getStatus();
 
 ####Retreive an invoice
 ```java
-invoice = bitpay.getInvoice(invoice.getId());
+Invoice invoice = bitpay.getInvoice(invoice.getId());
 ```
 ####Exchange Rates
 
@@ -49,14 +51,13 @@ rates.update();
 ```
 ####Advanced Invoices
 
-You can add additional params to the invoice by passing an InvoiceParams object. You don't have to set all of the advanced parameters. It will only use the ones you do set.
+You can add additional params to the invoice object prior to calling createInvoice(). You don't have to set all of the advanced parameters. It will only use the ones you do set.  createInvoice() updates your original invoice object.
 ```java
-InvoiceParams params = new InvoiceParams();
-
-params.setBuyerName("Satoshi");
-params.setBuyerEmail("satoshi@bitpay.com");
-params.setFullNotifications(true);
-params.setNotificationEmail("satoshi@bitpay.com");
-		
-Invoice invoice = this.bitpay.createInvoice(100, "USD", params);
+Invoice invoice = new Invoice(100.0, "USD");
+invoice.setBuyerName("Satoshi");
+invoice.setBuyerEmail("satoshi@bitpay.com");
+invoice.setFullNotifications(true);
+invoice.setNotificationEmail("satoshi@bitpay.com");
+invoice.setPosData("ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890");
+invoice = bitpay.createInvoice(invoice);
 ```
