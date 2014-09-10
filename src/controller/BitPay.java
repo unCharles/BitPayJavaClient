@@ -2,24 +2,21 @@ package controller;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.Hashtable;
 import java.util.List;
 
 import model.Invoice;
-import model.InvoiceParams;
-import model.LedgerEntry;
-import model.PayoutRequest;
+import model.Rate;
 import model.Rates;
+import model.Token;
 
-import org.json.JSONException;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
-import org.json.simple.parser.JSONParser;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
 import org.apache.http.ParseException;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
@@ -27,384 +24,453 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.bitcoin.core.ECKey;
 
-/**
- * 
- * @author Chaz Ferguson
- * @date 11.11.2013
- * 
- * Wrapper for BitPay's *new* BitAuth API.
- * 
- * In order to authenticate with the new API, you must generate a
- * public/private key pair using ECDSA curve secp256k1 and derive 
- * your SIN. The SIN is defined as the base58 check representation 
- * of: 	0x0F + 0x02 + RIPEMD-160(SHA-256(public key)), and using
- * the submiyKey method, then approve your key at 
- * bitpay.com/key-manager.
- * 
- * See bitpay.com/api for more information.
- */
 public class BitPay {
-	
-	private String baseUrl;
-	
-	private HttpClient client;
-	ECKey privateKey;
-	long nonce;
-	String SIN;
-	JSONArray tokens;
-	
-	/*
-	 * Constructor that takes a hex encoded private key
-	 * and the derived SIN.
-	 * 
-	 * @param	privateKey	hex encoded string representation
-	 * of a bitcoin private key.
-	 * @param SIN	the derived SIN from the public key.
-	 */
-	public BitPay(String privateKey, String SIN) {
-		ECKey key = KeyUtils.loadKey(privateKey);
-		this.baseUrl = "https://test.bitpay.com/";
-		this.nonce = new Date().getTime();
-		this.privateKey = key;
-		this.SIN = SIN;
-		client = HttpClientBuilder.create().build();
-		this.tokens = this.getTokens();
-	}
-	
-	/*
-	 * Returns the SIN derived from the public key.
-	 */
-	public String getSIN() {
-		return this.SIN;
-	}
-	
-	/*
-	 * Set the environment URL. The default is test.bitpay.com.
-	 * To use in production, set to https://bitpay.com
-	 * 
-	 * @param env	the URL of the environment
-	 */
-	public void setEnv(String env){
-		this.baseUrl = env;
-	}
-	
-	/*
-	 * Submit your SIN for approval.
-	 */
-	public JSONObject submitKey(String accountEmail, String label) {
-		List<NameValuePair> params = this.getParams(accountEmail, this.SIN, label);
-		String url = baseUrl + "keys";
-		HttpResponse response = this.post(url, params, false);
-		JSONObject obj = responseToObject(response);
-		return obj;
-	}
 
-	public JSONObject getKeys() {
-		List<NameValuePair> params = this.getParams();
-		String url = baseUrl + "keys";
-		HttpResponse response = this.get(url, params);
-		return responseToObject(response);
-	}
-	
-	public JSONArray getTokens() {
-		List<NameValuePair> params = this.getParams();
-		String url = baseUrl + "tokens";
-		HttpResponse response = this.get(url, params);
-		JSONObject obj = responseToObject(response);
-		JSONArray output = (JSONArray)obj.get("data");
-		return output;
-	}
-	
-	public String getToken(String key) throws BitPayException {
-		String tokenValue = "";
-		for(Object obj : this.tokens) {
-			JSONObject token = (JSONObject)obj;
-			if(token.containsKey(key)){
-				tokenValue = (String)token.get(key);
-			}
-		}
-		if (tokenValue.length() == 0) {
-			throw new BitPayException("You do not have Access to " + key + " resource.");
-		}
-		return tokenValue;
-	}
-	
-	public Invoice createInvoice(double price, String currency) throws BitPayException {
-		if(currency.length() > 3) {
-			throw new IllegalArgumentException("Must be a valid currency code");
-		}
-		
-		String url = baseUrl + "invoices";
-		List<NameValuePair> params = this.getParams(price, currency);
-		params.add(new BasicNameValuePair("token", this.getToken("merchant")));
-		HttpResponse response = this.post(url, params, true);
-		JSONObject obj = responseToObject(response);
-		try {
-			JSONObject invoiceData = (JSONObject)obj.get("data");
-			return new Invoice(invoiceData);
-		} catch (JSONException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-	
-	public Invoice createInvoice(double price, String currency, InvoiceParams optionalParams) throws BitPayException {
-		if(currency.length() > 3) {
-			throw new IllegalArgumentException("Must be a valid currency code");
-		}
-		
-		String url = baseUrl + "invoices";
-		List<NameValuePair> params = this.getParams(price, currency, optionalParams);
-		params.add(new BasicNameValuePair("token", this.getToken("merchant")));
-		HttpResponse response = this.post(url, params, true);
-		JSONObject obj = responseToObject(response);
-		try {
-			JSONObject invoiceData = (JSONObject)obj.get("data");
-			return new Invoice(invoiceData);
-		} catch (JSONException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-	
+    private static final String BITPAY_API_VERSION = "2.0.0";
+    private static final String BITPAY_PLUGIN_INFO = "BitPay Java Client " + BITPAY_API_VERSION;
+    private static final String BITPAY_URL = "https://bitpay.com/";
 
-	public Invoice getInvoice(String invoiceId) throws BitPayException {
-		String url = baseUrl + "invoices/" + invoiceId;
-		List<NameValuePair> params = this.getParams();
-		params.add(new BasicNameValuePair("token", this.getToken("merchant")));
-		HttpResponse response = this.get(url, params);
-		JSONObject obj = responseToObject(response);
-		try {
-			if(obj.containsKey("error")){
-				System.out.println(obj.get("error"));
-				return null;
-			}
-			JSONObject invoiceData = (JSONObject)obj.get("data");
-			return new Invoice(invoiceData);
-		} catch (JSONException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-	
-	public List<Invoice> getInvoices(String javascriptDateString) throws BitPayException {
-		String url = baseUrl + "invoices/";
-		List<NameValuePair> params = this.getParams();
-		params.add(new BasicNameValuePair("dateStart", javascriptDateString));
-		params.add(new BasicNameValuePair("token", this.getToken("merchant")));
-		HttpResponse response = this.get(url, params);
-		JSONObject obj = responseToObject(response);
-		try {
-			List<Invoice> invoices = new ArrayList<Invoice>();
-			JSONArray invoiceObjs = (JSONArray)obj.get("data");
-			for(Object invoiceObj : invoiceObjs){
-				invoices.add(new Invoice((JSONObject)invoiceObj));
-			}
-			return invoices;
-		} catch (JSONException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-	
-	public JSONObject submitPayoutRequest(PayoutRequest payoutRequest) throws BitPayException {
-		String url = baseUrl + "payouts";
-		List<NameValuePair> params = this.getParams();
-		params.add(new BasicNameValuePair("token", this.getToken("payroll")));
-		HttpResponse response = this.post(url, params, true);
-		System.out.println(responseToObject(response));
-		return responseToObject(response);
-	}
-	
-	public Rates getRates() {
-		String url = baseUrl + "rates";
-		
-		HttpGet get = new HttpGet(url);
-		
-		try {
-			HttpResponse response = client.execute(get);
-			JSONObject ratesObj = responseToObject(response);
-	        return new Rates((JSONArray)ratesObj.get("data"), this);
+    public static final String FACADE_PAYROLL  = "payroll";
+    public static final String FACADE_POS = "pos";
+    public static final String FACADE_MERCHANT = "merchant";
+    public static final String FACADE_USER = "user";
 
-		} catch (ClientProtocolException e) {
-			e.printStackTrace();
+    private HttpClient _httpClient = null;
+    private String _baseUrl = BITPAY_URL;
+    private ECKey _ecKey = null;
+    private String _identity = "";
+    private long _nonce = new Date().getTime();
+    private boolean _disableNonce = false;
+    private String _clientName = "";
+    private Hashtable<String, String> _tokenCache; // {facade, token}
+	
+    /**
+     * Constructor for use if the keys and SIN are managed by this library.
+     * @param clientName - The label for this client.
+     * @param envUrl - The target server URL.
+     * @throws BitPayException 
+     */
+    public BitPay(String clientName, String envUrl) throws BitPayException
+    {
+        if (clientName.equals(BITPAY_PLUGIN_INFO))
+        {
+            try {
+				clientName += " on " + java.net.InetAddress.getLocalHost();
+			} catch (UnknownHostException e) {
+				clientName += " on unknown host";
+			}
+        }
+        _clientName = clientName;
+
+        _baseUrl = envUrl;
+	    _httpClient = HttpClientBuilder.create().build();
+
+        try {
+			this.initKeys();
 		} catch (IOException e) {
-			e.printStackTrace();
+			throw new BitPayException("Error: failed to intialize public/private key pair\n" + e.getMessage());
 		}
-		return null;
+        this.deriveIdentity();
+        this.tryGetAccessTokens();
+    }
+    
+    public BitPay(String clientName) throws BitPayException
+    {
+    	this(clientName, BITPAY_URL);
+    }
+    
+    public BitPay() throws BitPayException
+    {
+    	this(BITPAY_PLUGIN_INFO, BITPAY_URL);
+    }
+
+    /**
+     * Constructor for use if the keys and SIN were derived external to this library.
+     * @param ecKey - An elliptical curve key.
+     * @param clientName - The label for this client.
+     * @param envUrl - The target server URL.
+     * @throws BitPayException
+     */
+    public BitPay(ECKey ecKey, String clientName, String envUrl) throws BitPayException
+    {
+        _ecKey = ecKey;
+        this.deriveIdentity();
+        _baseUrl = envUrl;
+	    _httpClient = HttpClientBuilder.create().build();
+        this.tryGetAccessTokens();
+    }
+
+    public String getIdentity()
+    {
+        return _identity;
+    }
+
+    public boolean getDisableNonce()
+    {
+        return _disableNonce;
+    }
+    
+    public void setDisableNonce(boolean value)
+    {
+    	_disableNonce = value;
+    }
+
+    public void authorizeClient(String pairingCode) throws BitPayException
+    {
+        Token token = new Token();
+        token.setId(_identity);
+        token.setGuid(this.getGuid());
+        token.setNonce(getNextNonce());
+        token.setPairingCode(pairingCode);
+        token.setLabel(_clientName);
+        
+        ObjectMapper mapper = new ObjectMapper();
+        String json;
+		try {
+			json = mapper.writeValueAsString(token);
+		} catch (JsonProcessingException e) {
+			throw new BitPayException("Error - failed to serialize Token object : " + e.getMessage());
+		}
+        HttpResponse response = this.post("tokens", json);
+        
+        List<Token> tokens;
+		try {
+        	tokens = Arrays.asList(mapper.readValue(this.responseToJsonString(response), Token[].class));
+		} catch (JsonProcessingException e) {
+			throw new BitPayException("Error - failed to deserialize BitPay server response (Tokens) : " + e.getMessage());
+		} catch (IOException e) {
+			throw new BitPayException("Error - failed to deserialize BitPay server response (Tokens) : " + e.getMessage());
+		}
+        for (Token t : tokens)
+        {
+            _tokenCache.put(t.getFacade(), t.getValue());
+        }
+    }
+
+    public boolean clientIsAuthorized(String facade)
+    {
+        return _tokenCache.containsKey(facade);
+    }
+
+    public Invoice createInvoice(Invoice invoice, String facade) throws BitPayException
+    {
+        invoice.setToken(this.getAccessToken(facade));
+        invoice.setGuid(this.getGuid());
+        invoice.setNonce(this.getNextNonce());
+        
+        ObjectMapper mapper = new ObjectMapper();
+        String json;
+		try {
+			json = mapper.writeValueAsString(invoice);
+		} catch (JsonProcessingException e) {
+			throw new BitPayException("Error - failed to serialize Invoice object : " + e.getMessage());
+		}
+		
+        HttpResponse response = this.postWithSignature("invoices", json);        
+        
+		try {
+        	invoice = mapper.readerForUpdating(invoice).readValue(this.responseToJsonString(response));
+		} catch (JsonProcessingException e) {
+			throw new BitPayException("Error - failed to deserialize BitPay server response (Invoice) : " + e.getMessage());
+		} catch (IOException e) {
+			throw new BitPayException("Error - failed to deserialize BitPay server response (Invoice) : " + e.getMessage());
+		}
+        return invoice;
+    }
+
+    public Invoice createInvoice(Invoice invoice) throws BitPayException
+    {
+    	return this.createInvoice(invoice, FACADE_POS);
+    }
+
+    public Invoice getInvoice(String invoiceId) throws BitPayException
+    {
+        HttpResponse response = this.get("invoices/" + invoiceId);
+        Invoice i;
+		try {
+        	i = new ObjectMapper().readValue(this.responseToJsonString(response), Invoice.class);
+		} catch (JsonProcessingException e) {
+			throw new BitPayException("Error - failed to deserialize BitPay server response (Invoice) : " + e.getMessage());
+		} catch (IOException e) {
+			throw new BitPayException("Error - failed to deserialize BitPay server response (Invoice) : " + e.getMessage());
+		}
+        return i;
+    }
+
+    public List<Invoice> getInvoices(String dateStart, String dateEnd) throws BitPayException
+    {
+        Hashtable<String, String> parameters = this.getParams();
+        parameters.put("token", this.getAccessToken(FACADE_MERCHANT));
+        parameters.put("dateStart", dateStart);
+        parameters.put("dateEnd", dateEnd);
+        HttpResponse response = this.get("invoices", parameters);
+        
+        List<Invoice> invoices;
+		try {
+        	invoices = Arrays.asList(new ObjectMapper().readValue(this.responseToJsonString(response), Invoice[].class));
+		} catch (JsonProcessingException e) {
+			throw new BitPayException("Error - failed to deserialize BitPay server response (Invoices) : " + e.getMessage());
+		} catch (IOException e) {
+			throw new BitPayException("Error - failed to deserialize BitPay server response (Invoices) : " + e.getMessage());
+		}
+		return invoices;
+    }
+
+    public Rates getRates() throws BitPayException
+    {
+        HttpResponse response = this.get("rates");
+        
+        List<Rate> rates;
+		try {
+        	rates = Arrays.asList(new ObjectMapper().readValue(this.responseToJsonString(response), Rate[].class));
+		} catch (JsonProcessingException e) {
+			throw new BitPayException("Error - failed to deserialize BitPay server response (Rates) : " + e.getMessage());
+		} catch (IOException e) {
+			throw new BitPayException("Error - failed to deserialize BitPay server response (Rates) : " + e.getMessage());
+		}
+        return new Rates(rates, this);
+    }
+    
+    private void initKeys() throws IOException
+    {
+        if (KeyUtils.privateKeyExists())
+        {
+            _ecKey = KeyUtils.loadEcKey();
+
+            // Alternatively, load your private key from a location you specify.
+            // _ecKey = KeyUtils.createEcKeyFromHexStringFile("C:\\Users\\key.priv");
+        }
+        else
+        {
+            _ecKey = KeyUtils.createEcKey();
+            KeyUtils.saveEcKey(_ecKey);
+        }
+    }
+    
+    private void deriveIdentity() throws IllegalArgumentException
+    {
+        // Identity in this implementation is defined to be the SIN.
+        _identity = KeyUtils.deriveSIN(_ecKey);
+    }
+    
+    private long getNextNonce()
+    {
+        if (!getDisableNonce())
+        {
+            _nonce++;
+        }
+        else
+        {
+            _nonce = 0;  // Nonce must be 0 when it has been disabled (0 value prevents serialization)
+        }
+        return _nonce;
+    }
+    
+    private Hashtable<String, String> responseToTokenCache(HttpResponse response) throws BitPayException
+    {
+        // The response is expected to be an array of key/value pairs (facade name = token).
+        String json = this.responseToJsonString(response);
+        
+		try {
+			json = json.replaceAll("\\[", "");  // Remove the array context so we can map to a hashtable.
+			json = json.replaceAll("\\]", "");
+			_tokenCache = new ObjectMapper().readValue(json, new TypeReference<Hashtable<String,String>>(){});
+		} catch (JsonProcessingException e) {
+			throw new BitPayException("Error - failed to deserialize BitPay server response (Token array) : " + e.getMessage());
+		} catch (IOException e) {
+			throw new BitPayException("Error - failed to deserialize BitPay server response (Token array) : " + e.getMessage());
+		}
+        return _tokenCache;
+    }
+    
+    private void clearAccessTokenCache() 
+    {
+        _tokenCache = new Hashtable<String, String>();
+    }
+
+    private boolean tryGetAccessTokens() throws BitPayException
+    {
+        // Attempt to get access tokens for this client identity.
+        try
+        {
+            // Success if at least one access token was returned.
+            return this.getAccessTokens() > 0;
+        }
+        catch (BitPayException ex)
+        {
+            // If the error states that the identity is invalid then this client has not been
+            // registered with the BitPay account.
+            if (ex.getMessage().contains("Unauthorized sin"))
+            {
+                this.clearAccessTokenCache();
+                return false;
+            }
+            else
+            {
+                // Propagate all other errors.
+                throw ex;
+            }
+        }
+    }
+
+    private int getAccessTokens() throws BitPayException
+    {
+        this.clearAccessTokenCache();
+        Hashtable<String, String> parameters = this.getParams();
+        HttpResponse response = this.get("tokens", parameters);
+        _tokenCache = responseToTokenCache(response);
+        return _tokenCache.size();
+    }
+
+    private String getAccessToken(String facade) throws BitPayException
+    {
+        if (!_tokenCache.containsKey(facade))
+        {
+            throw new BitPayException("Error: You do not have access to facade: " + facade);
+        }
+        return _tokenCache.get(facade);
+    }
+
+	private Hashtable<String, String> getParams() 
+	{
+		Hashtable<String, String> params = new Hashtable<String, String>();
+		params.put("nonce", getNextNonce() + "");
+		return params;
 	}
 
-	public List<LedgerEntry> getLedger(String currency, String startDate, String endDate) throws BitPayException {
-		String url = baseUrl + "ledgers/" + currency;
-		List<NameValuePair> params = this.getParams();
-		params.add(new BasicNameValuePair("startDate", startDate));
-		params.add(new BasicNameValuePair("endDate", endDate));
-		params.add(new BasicNameValuePair("token", this.getToken("merchant")));
-		HttpResponse response = this.get(url, params);
-		JSONObject obj = responseToObject(response);
+	private HttpResponse get(String uri, Hashtable<String, String> parameters) throws BitPayException
+	{
 		try {
-			List<LedgerEntry> ledger = new ArrayList<LedgerEntry>();
-			JSONArray ledgerEntryObjs = (JSONArray)obj.get("data");
-			for(Object ledgerEntryObj : ledgerEntryObjs){
-				ledger.add(new LedgerEntry((JSONObject)ledgerEntryObj));
+
+			String fullURL = _baseUrl + uri;
+			HttpGet get = new HttpGet(fullURL);
+			if (parameters != null)
+			{
+				fullURL += "?";
+				for (String key : parameters.keySet()) {
+					fullURL += key + "=" + parameters.get(key) + "&";
+				}		
+				fullURL = fullURL.substring(0,fullURL.length() - 1);
+				get.setURI(new URI(fullURL));
+				String signature = KeyUtils.sign(_ecKey, fullURL);
+				get.addHeader("x-bitpay-plugin-info", BITPAY_PLUGIN_INFO);
+				get.addHeader("x-accept-version", BITPAY_API_VERSION);
+				get.addHeader("x-signature", signature);
+				get.addHeader("x-identity", KeyUtils.bytesToHex(_ecKey.getPubKey()));
 			}
-			return ledger;
-		} catch (JSONException e) {
-			e.printStackTrace();
+			return _httpClient.execute(get);
+			
+		} catch (URISyntaxException e) {
+			throw new BitPayException("Error: GET failed\n" + e.getMessage());
+		} catch (ClientProtocolException e) {
+			throw new BitPayException("Error: GET failed\n" + e.getMessage());
+		} catch (IOException e) {
+			throw new BitPayException("Error: GET failed\n" + e.getMessage());
 		}
-		return null;
 	}
 
-	
-	private String signData(String url) {
-		return KeyUtils.signString(privateKey, url);
+	private HttpResponse get(String uri) throws BitPayException
+	{
+		return this.get(uri, null);
 	}
 
-	
-	private String signData(String url, List<NameValuePair> body) {
-		try {
-			JSONObject json = (JSONObject)new JSONParser().parse(toJsonString(body));
-			String data = url + json.toString();
-			return KeyUtils.signString(privateKey, data);
-		} catch (org.json.simple.parser.ParseException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
-	private String toJsonString(List<NameValuePair> body) {
-		String data = "{";
-		for(int i = 0;i<body.size();i++){
-			data += '"' + body.get(i).getName() + "\":\"" + body.get(i).getValue() + "\",";
-		}
-		data = data.substring(0,data.length() - 1);
-		data += "}";
-		return data;
-	}
-
-	private List<NameValuePair> getParams() {
-		List<NameValuePair> params = new ArrayList<NameValuePair>(2);
-		params.add(new BasicNameValuePair("nonce", this.nonce + ""));
-		this.nonce++;
-		return params;
-	}
-	
-	private List<NameValuePair> getParams(String email, String sin, String label) {
-		List<NameValuePair> params = new ArrayList<NameValuePair>(2);
-		params.add(new BasicNameValuePair("nonce", this.nonce + ""));
-		params.add(new BasicNameValuePair("sin", sin));
-		params.add(new BasicNameValuePair("email", email));
-		params.add(new BasicNameValuePair("label", label));
-		this.nonce++;
-		return params;
-	}
-	
-	private List<NameValuePair> getParams(double price,
-			String currency) {
-		List<NameValuePair> params = new ArrayList<NameValuePair>(2);
-		params.add(new BasicNameValuePair("price", price + ""));
-		params.add(new BasicNameValuePair("currency", currency));
-		params.add(new BasicNameValuePair("nonce", this.nonce + ""));
-		this.nonce++;
-		return params;
-	}
-	
-	private List<NameValuePair> getParams(double price,
-			String currency, InvoiceParams optionalParams) {
-		List<NameValuePair> params = new ArrayList<NameValuePair>(2);
-		for (BasicNameValuePair param : optionalParams.getNameValuePairs()) {
-			params.add(param);
-		}
-		params.add(new BasicNameValuePair("price", price + ""));
-		params.add(new BasicNameValuePair("currency", currency));
-		params.add(new BasicNameValuePair("nonce", this.nonce + ""));
-		this.nonce++;
-		return params;
-	}
-
-	private HttpResponse post(String url, List<NameValuePair> params, Boolean requiresSignature) {
-		try {
-			params.add(new BasicNameValuePair("guid", this.getGuid()));
-			JSONObject json = (JSONObject)new JSONParser().parse(toJsonString(params));
-			HttpPost post = new HttpPost(url);
+	private HttpResponse post(String uri, String json, boolean signatureRequired) throws BitPayException 
+	{
+		try {			
+			HttpPost post = new HttpPost(_baseUrl + uri);
 		    post.setEntity(new ByteArrayEntity(json.toString().getBytes("UTF8")));
-		    if (requiresSignature) {
-		    	String signature = signData(url, params);
+		    if (signatureRequired) {
+				String signature = KeyUtils.sign(_ecKey, _baseUrl + uri + json);
 		    	post.addHeader("x-signature", signature);
-		    	post.addHeader("x-pubkey", KeyUtils.bytesToHex(privateKey.getPubKey()));
+		    	post.addHeader("x-identity", KeyUtils.bytesToHex(_ecKey.getPubKey()));
 		    }
-			post.addHeader("X-BitPay-Plugin-Info", "Javalib0.1.0");
-			
+			post.addHeader("x-accept-version", BITPAY_API_VERSION);
+			post.addHeader("x-bitpay-plugin-info", BITPAY_PLUGIN_INFO);
 			post.addHeader("Content-Type","application/json");
-			
-			HttpResponse response = this.client.execute(post);
-	        return response;
+			return _httpClient.execute(post);
 	        
 		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
+			throw new BitPayException("Error: POST failed\n" + e.getMessage());
 		} catch (ClientProtocolException e) {
-			e.printStackTrace();
+			throw new BitPayException("Error: POST failed\n" + e.getMessage());
 		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (org.json.simple.parser.ParseException e) {
-			e.printStackTrace();
+			throw new BitPayException("Error: POST failed\n" + e.getMessage());
 		}
-		System.out.println("Could not get a POST response from the server.");
-		return null;
 	}
 
-	private HttpResponse get(String url, List<NameValuePair> params) {
-		String fullURL = url + "?";
-		for(int i = 0;i<params.size();i++){
-			fullURL += params.get(i).getName() + "=" + params.get(i).getValue() + "&";
+	private HttpResponse post(String uri, String json) throws BitPayException 
+	{
+		return this.post(uri, json, false);
+	}
+
+	private HttpResponse postWithSignature(String uri, String json) throws BitPayException 
+	{
+		return this.post(uri, json, true);
+	}
+
+	private String responseToJsonString(HttpResponse response) throws BitPayException 
+	{
+		if (response == null)
+		{
+			throw new BitPayException("Error: HTTP response is null");
 		}
-		fullURL = fullURL.substring(0,fullURL.length() - 1);
 		try {
-			HttpGet get = new HttpGet(fullURL);
+			// Get the JSON string from the response.
+			HttpEntity entity = response.getEntity();
+			String jsonString;
+			jsonString = EntityUtils.toString(entity, "UTF-8");
+
+			ObjectMapper mapper = new ObjectMapper();
+			JsonNode rootNode = mapper.readTree(jsonString);			
 			
-			String sig = signData(fullURL);
-			get.addHeader("X-BitPay-Plugin-Info", "Javalib0.1.0");
-			get.addHeader("x-signature", sig);
-			get.addHeader("x-pubkey", KeyUtils.bytesToHex(privateKey.getPubKey()));
-			HttpResponse response = client.execute(get);
-	        return response;
-		} catch (ClientProtocolException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		System.out.println("Could not get a GET response from the server.");
-		return null;
-	}
-	
-	private JSONObject responseToObject(HttpResponse response) {
-		HttpEntity entity = response.getEntity();
-		try {
-			String responseString = EntityUtils.toString(entity, "UTF-8");
-			Object obj=JSONValue.parse(responseString);
-			JSONObject finalResult = (JSONObject)obj;
-			if(finalResult.containsKey("error")) {
-				System.out.println("Error: " + finalResult.get("error"));
-			}
-			return finalResult;
+			JsonNode node = rootNode.get("error");
+		    if (node != null)
+		    {
+		    	throw new BitPayException("Error: " + node.asText());
+		    }
+		    
+			node = rootNode.get("errors");
+		    if (node != null)
+		    {
+		    	String message = "Multiple errors:";
+		    	if (node.isArray()) {
+		    	    for (final JsonNode errorNode : node) {
+		    	    	message += "\n" + errorNode.asText();
+		    	    }
+	                throw new BitPayException(message);
+		    	}
+		    }
+		    
+			node = rootNode.get("data");
+		    if (node != null)
+		    {
+		        jsonString = node.toString();
+		    }
+		    
+			return jsonString;
+			
 		} catch (ParseException e) {
-			e.printStackTrace();
+			throw new BitPayException("Error - failed to retrieve HTTP response body : " + e.getMessage());
+		} catch (JsonMappingException e) {
+			throw new BitPayException("Error - failed to parse json response to map : " + e.getMessage());
 		} catch (IOException e) {
-			e.printStackTrace();
+			throw new BitPayException("Error - failed to retrieve HTTP response body : " + e.getMessage());
 		}
-		System.out.println("Could not create a JSONObject from the HttpResponse.");
-		return null;
 	}
 
-	private String getGuid(){
+	private String getGuid() 
+	{
 		int Min = 0;
 		int Max = 99999999;
 		return Min + (int)(Math.random() * ((Max - Min) + 1)) + "";
 	}
-	
 }

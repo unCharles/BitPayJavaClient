@@ -8,8 +8,6 @@
 	<classpathentry kind="lib" path="lib/httpclient-cache-4.3.1.jar"/>
 	<classpathentry kind="lib" path="lib/httpcore-4.3.jar"/>
 	<classpathentry kind="lib" path="lib/httpmime-4.3.1.jar"/>
-	<classpathentry kind="lib" path="lib/java-json.jar"/>
-	<classpathentry kind="lib" path="lib/json-simple-1.1.1.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/3"/>
@@ -18,5 +16,8 @@
 	<classpathentry kind="lib" path="lib/slf4j-simple-1.7.7.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-api-1.7.7.jar"/>
 	<classpathentry kind="lib" path="lib/com.google.common_1.0.0.201004262004.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-annotations-2.4.0.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-core-2.4.2.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-databind-2.4.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
